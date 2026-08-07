@@ -3,8 +3,8 @@ import jwt from "jsonwebtoken";
 import sql from "@/lib/db";
 //import db from "../../../../lib/db";
 
-const JWT_SECRET = process.env.JWT_SECRET || "super-secret-islandspares-jwt-token-key-change-me";
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@islandspares.com";
+const JWT_SECRET = process.env.JWT_SECRET || "super-secret-carzone-jwt-token-key-change-me";
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@carzone.lk";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
 
 export async function POST(request: Request) {
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
 
     try {
       const dbUsers = await sql`
-        SELECT id, email, password_hash, full_name, role 
+        SELECT id, email, password_hash, COALESCE(full_name, name, 'Admin') as full_name, COALESCE(role, 'admin') as role 
         FROM admin_users 
         WHERE LOWER(email) = LOWER(${email.trim()})
       `;
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
         authenticatedUser = {
           id: 999,
           email: ADMIN_EMAIL,
-          fullName: "IslandSpares Admin",
+          fullName: "Carz One Admin",
           role: "admin",
         };
       }

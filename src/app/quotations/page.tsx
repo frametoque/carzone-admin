@@ -195,11 +195,11 @@ const handleDelete = async (id: number) => {
       </div>
 
       {/* Table */}
-      <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden">
+      <div className="bg-[#ffffff] border border-[#e2e8f0] rounded-3xl overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-white/10 text-gray-400 text-sm">
+              <tr className="border-b border-[#e2e8f0] text-[#64748b] text-sm">
                 <th className="p-4 font-medium">Date</th>
                 <th className="p-4 font-medium">Amount</th>
                 <th className="p-4 font-medium">Client</th>
@@ -209,82 +209,73 @@ const handleDelete = async (id: number) => {
                 <th className="p-4 font-medium text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-[#f1f5f9] text-[#0f172a]">
               {filteredQuotations.map((row: any) => (
-                <tr key={row.id} className="hover:bg-white/5 transition-colors">
-                  <td className="p-4 text-sm">{row.date}</td>
-                  <td className="p-4 font-semibold text-blue-400">{formatLKR(row.amount)}</td>
-                  <td className="p-4 text-sm">{row.client || '-'}</td>
-                  <td className="p-4 text-sm text-gray-300">{row.desc}</td>
-                  <td className="p-4">
-                    <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-white/10 border border-white/10">
+                <tr key={row.id} className="hover:bg-[#f8fafc] transition-colors">
+                  <td className="p-4 text-sm text-[#64748b] whitespace-nowrap">{row.date}</td>
+                  <td className="p-4 font-semibold text-[#0284c7] whitespace-nowrap">{formatLKR(row.amount)}</td>
+                  <td className="p-4 text-sm text-[#0f172a] font-medium">{row.client || '-'}</td>
+                  <td className="p-4 text-sm text-[#334155]">{row.desc}</td>
+                  <td className="p-4 whitespace-nowrap">
+                    <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-[#f1f5f9] border border-[#cbd5e1] text-[#475569]">
                       {row.category}
                     </span>
                   </td>
-                  <td className="p-4">
-                    <span className={`px-3 py-1 text-xs font-medium rounded-full border capitalize ${getStatusColor(row.status)}`}>
+                  <td className="p-4 whitespace-nowrap">
+                    <span className={`px-3 py-1 text-xs font-semibold rounded-full border capitalize ${getStatusColor(row.status)}`}>
                       {row.status}
                     </span>
                   </td>
-                  <td className="p-4 flex items-center justify-end gap-2">
-                    {row.status !== 'confirmed' && (
+                  <td className="p-4">
+                    <div className="flex items-center justify-end gap-1">
+                      {row.status !== 'confirmed' && (
+                        <button 
+                          onClick={() => handleConfirmDirect(row.id, row)}
+                          className="p-2 hover:bg-emerald-50 rounded-xl transition-colors text-[#64748b] hover:text-[#15803d] disabled:opacity-50"
+                          title="Confirm & create invoice"
+                        >
+                          {confirmingLoading && confirmingId === row.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin text-[#15803d]" />
+                          ) : (
+                            <CheckCircle2 className="w-4 h-4" />
+                          )}
+                        </button>
+                      )}
+                      {row.status === 'confirmed' && (
+                        <span className="p-2 text-[#15803d]" title="Quotation Confirmed">
+                          <CheckCircle2 className="w-4 h-4" />
+                        </span>
+                      )}
+                      {row.receiptUrl && (
+                        <button onClick={() => setViewingReceipt(row)} className="p-2 hover:bg-[#f1f5f9] rounded-xl transition-colors text-[#0284c7] hover:text-[#0369a1]">
+                          <Eye className="w-4 h-4" />
+                        </button>
+                      )}
                       <button 
-                        onClick={() => handleConfirmDirect(row.id, row)}
-                        //disabled={confirmingLoading && confirmingId === row.id}
-                        className="p-2 hover:bg-green-400/10 rounded-xl transition-colors text-gray-400 hover:text-green-400 disabled:opacity-50"
-                        title="Confirm & create invoice"
+                        onClick={() => handleDownloadPDF(row)}
+                        disabled={downloadingId === row.id}
+                        className="p-2 hover:bg-[#f1f5f9] rounded-xl transition-colors text-[#64748b] hover:text-[#002f4c] disabled:opacity-50"
+                        title="Download Quotation PDF"
                       >
-                        {confirmingLoading && confirmingId === row.id ? (
+                        {downloadingId === row.id ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
                         ) : (
-                          <CheckCircle2 className="w-4 h-4" />
+                          <Download className="w-4 h-4" />
                         )}
                       </button>
-                    )}
-                    {row.status === 'confirmed' && (
-                      <span className="p-2 text-green-400" title="Quotation Confirmed">
-                        <CheckCircle2 className="w-4 h-4" />
-                      </span>
-                    )}
-                    {row.receiptUrl && (
-                      <button onClick={() => setViewingReceipt(row)} className="p-2 hover:bg-white/10 rounded-xl transition-colors text-blue-400 hover:text-blue-300">
-                        <Eye className="w-4 h-4" />
+                      <button onClick={() => router.push(`/quotations/${row.id}/edit`)} className="p-2 hover:bg-[#f1f5f9] rounded-xl transition-colors text-[#64748b] hover:text-[#0f172a]">
+                        <Edit2 className="w-4 h-4" />
                       </button>
-                    )}
-                    <button 
-                      onClick={() => handleDownloadPDF(row)}
-                      disabled={downloadingId === row.id}
-                      className="p-2 hover:bg-white/10 rounded-xl transition-colors text-gray-400 hover:text-white disabled:opacity-50"
-                      title="Download Quotation PDF"
-                    >
-                      {downloadingId === row.id ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Download className="w-4 h-4" />
-                      )}
-                    </button>
-                    <button 
-                      onClick={() => router.push(`/quotations/${row.id}/edit`)}
-                      className="p-2 hover:bg-white/10 rounded-xl transition-colors text-gray-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed" 
-                      disabled={row.status === 'confirmed'}
-                      title={row.status === 'confirmed' ? 'Confirmed quotations cannot be edited' : 'Edit quotation'}
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button 
-                      onClick={() => handleDelete(row.id)} 
-                      className="p-2 hover:bg-red-400/10 rounded-xl transition-colors text-gray-400 hover:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed" 
-                      disabled={row.status === 'confirmed'}
-                      title={row.status === 'confirmed' ? 'Confirmed quotations cannot be deleted' : 'Delete quotation'}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                      <button onClick={() => handleDelete(row.id)} className="p-2 hover:bg-red-50 rounded-xl transition-colors text-[#64748b] hover:text-red-600">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
               {filteredQuotations.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="p-6 text-center text-gray-500">No quotations found.</td>
+                  <td colSpan={7} className="p-8 text-center text-[#64748b]">No quotation records found.</td>
                 </tr>
               )}
             </tbody>

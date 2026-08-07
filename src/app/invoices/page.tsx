@@ -179,11 +179,11 @@ export default function InvoicesPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden">
+      <div className="bg-[#ffffff] border border-[#e2e8f0] rounded-3xl overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-white/10 text-gray-400 text-sm">
+              <tr className="border-b border-[#e2e8f0] text-[#64748b] text-sm">
                 <th className="p-4 font-medium">Invoice ID</th>
                 <th className="p-4 font-medium">Client</th>
                 <th className="p-4 font-medium">Amount</th>
@@ -192,65 +192,79 @@ export default function InvoicesPage() {
                 <th className="p-4 font-medium text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-[#f1f5f9] text-[#0f172a]">
               {filteredInvoices.map((row: any) => {
                 const paymentStatus = row.status?.toLowerCase() || '';
 
-                let paymentColor = "text-gray-400 bg-gray-400/10 border-gray-400/20";
-                if (paymentStatus === 'paid') paymentColor = "text-green-400 bg-green-400/10 border-green-400/20";
-                else if (paymentStatus === 'advance-paid' || paymentStatus === 'advance paid') paymentColor = "text-blue-400 bg-blue-400/10 border-blue-400/20";
-                else if (paymentStatus === 'partially-paid' || paymentStatus === 'partially paid') paymentColor = "text-purple-400 bg-purple-400/10 border-purple-400/20";
-                else if (paymentStatus === 'unpaid' || paymentStatus === 'pending') paymentColor = "text-amber-400 bg-amber-400/10 border-amber-400/20";
-                else if (paymentStatus === 'overdue') paymentColor = "text-red-400 bg-red-400/10 border-red-400/20";
+                let paymentColor = "text-[#64748b] bg-[#f1f5f9] border-[#cbd5e1]";
+                if (paymentStatus === 'paid') paymentColor = "text-[#15803d] bg-emerald-50 border-emerald-200";
+                else if (paymentStatus === 'advance-paid' || paymentStatus === 'advance paid') paymentColor = "text-[#0284c7] bg-sky-50 border-sky-200";
+                else if (paymentStatus === 'partially-paid' || paymentStatus === 'partially paid') paymentColor = "text-[#7e22ce] bg-purple-50 border-purple-200";
+                else if (paymentStatus === 'unpaid' || paymentStatus === 'pending') paymentColor = "text-[#b45309] bg-amber-50 border-amber-200";
+                else if (paymentStatus === 'overdue') paymentColor = "text-[#b91c1c] bg-red-50 border-red-200";
 
                 return (
-                  <tr key={row.id} className="hover:bg-white/5 transition-colors">
-                    <td className="p-4">
-                      <Link href={`/invoice/${row.id}`} className="font-semibold text-brand-400 hover:text-brand-300 transition-colors">
+                  <tr key={row.id} className="hover:bg-[#f8fafc] transition-colors">
+                    <td className="p-4 whitespace-nowrap">
+                      <Link href={`/invoice/${row.id}`} className="font-bold text-[#b91c1c] hover:text-[#991b1b] transition-colors flex items-center gap-1.5 text-sm">
+                        <FileText className="w-4 h-4 text-[#b91c1c]" />
                         {row.id}
                       </Link>
                     </td>
-                    <td className="p-4 text-sm text-gray-300">{row.client}</td>
-                    <td className="p-4">
+                    <td className="p-4 text-sm text-[#0f172a] font-medium">{row.client}</td>
+                    <td className="p-4 whitespace-nowrap">
                       <div className="flex flex-col">
-                        <span className="font-semibold">{formatLKR(row.amount)}</span>
+                        <span className="font-semibold text-[#0f172a]">{formatLKR(row.amount)}</span>
                         {paymentStatus !== 'paid' && row.totalDue > 0 && row.totalDue < row.amount && (
-                          <span className="text-xs text-purple-400 font-semibold mt-0.5" title="Remaining Balance">
+                          <span className="text-xs text-[#7e22ce] font-semibold mt-0.5" title="Remaining Balance">
                             Due: {formatLKR(row.totalDue)}
                           </span>
                         )}
                         {paymentStatus !== 'paid' && row.totalDue === row.amount && (
-                          <span className="text-xs text-gray-400 font-medium mt-0.5" title="Remaining Balance">
+                          <span className="text-xs text-[#64748b] font-medium mt-0.5" title="Remaining Balance">
                             Due: {formatLKR(row.totalDue)}
                           </span>
                         )}
                       </div>
                     </td>
-                    <td className={`p-4 text-sm ${row.overdue ? 'text-red-400 font-semibold' : 'text-gray-300'}`}>
+                    <td className={`p-4 text-sm whitespace-nowrap ${row.overdue ? 'text-[#b91c1c] font-semibold' : 'text-[#64748b]'}`}>
                       {row.due}
                     </td>
-                    <td className="p-4">
-                      <span className={`px-2.5 py-1 text-[10px] uppercase font-bold rounded-full border ${paymentColor}`}>
+                    <td className="p-4 whitespace-nowrap">
+                      <span className={`px-3 py-1 text-xs font-semibold rounded-full border ${paymentColor}`}>
                         {row.status?.replace('-', ' ')}
                       </span>
                     </td>
                     <td className="p-4">
                       <div className="flex items-center justify-end gap-1">
                         {paymentStatus !== 'paid' && (
-                          <button onClick={() => openPaymentModal(row)} className="p-2 hover:bg-white/10 rounded-xl transition-colors text-gray-400 hover:text-white" title="Record Payment">
+                          <button
+                            onClick={() => openPaymentModal(row)}
+                            title="Record Payment"
+                            className="p-2 hover:bg-[#f1f5f9] rounded-xl transition-colors text-[#64748b] hover:text-[#15803d]"
+                          >
                             <DollarSign className="w-4 h-4" />
                           </button>
                         )}
-                        <Link href={`/invoice/${row.id}`} className="p-2 hover:bg-white/10 rounded-xl transition-colors text-gray-400 hover:text-white" title="View">
-                          <Eye className="w-4 h-4" />
-                        </Link>
-                        <Link href={`/invoices/${row.id}/edit`} className="p-2 hover:bg-white/10 rounded-xl transition-colors text-gray-400 hover:text-white" title="Edit">
-                          <Edit2 className="w-4 h-4" />
-                        </Link>
-                        <Link href={`/invoice/${row.id}?download=true`} className="p-2 hover:bg-white/10 rounded-xl transition-colors text-gray-400 hover:text-white" title="Download PDF">
+                        <Link
+                          href={`/invoice/${row.id}?download=true`}
+                          title="Download PDF"
+                          className="p-2 hover:bg-[#f1f5f9] rounded-xl transition-colors text-[#64748b] hover:text-[#002f4c]"
+                        >
                           <Download className="w-4 h-4" />
                         </Link>
-                        <button onClick={() => handleDelete(row.id)} className="p-2 hover:bg-red-400/10 rounded-xl transition-colors text-gray-400 hover:text-red-400" title="Delete">
+                        <Link
+                          href={`/invoices/${row.id}/edit`}
+                          title="Edit Invoice"
+                          className="p-2 hover:bg-[#f1f5f9] rounded-xl transition-colors text-[#64748b] hover:text-[#0f172a]"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </Link>
+                        <button
+                          onClick={() => handleDelete(row.id)}
+                          title="Delete Invoice"
+                          className="p-2 hover:bg-red-50 rounded-xl transition-colors text-[#64748b] hover:text-red-600"
+                        >
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
@@ -260,7 +274,7 @@ export default function InvoicesPage() {
               })}
               {filteredInvoices.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="p-6 text-center text-gray-500">No invoices found.</td>
+                  <td colSpan={6} className="p-8 text-center text-[#64748b]">No invoices found.</td>
                 </tr>
               )}
             </tbody>

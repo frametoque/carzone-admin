@@ -7,7 +7,7 @@ import { useRouter, useParams } from "next/navigation";
 import { updateInvoice, getInvoiceByIdAdmin, getClients, createClient } from "../../../actions/actions";
 import CategoryPicker from "../../../components/CategoryPicker";
 
-const ALL_CATEGORIES = ["Brake", "Coolant", "Electronic Accessories", "Filters", "Modifications", "Oil", "Suspension", "Spare Parts", "Other"];
+const ALL_CATEGORIES = ["Vehicle Sales", "Broker Commission", "Registration & Transfer Fees", "Inspection & Certification", "Financing & Lease Commission", "Other Services"];
 
 const parseCategories = (raw: string | undefined): string[] => {
   if (!raw) return ["Spare Parts"];

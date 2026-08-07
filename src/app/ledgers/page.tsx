@@ -404,7 +404,9 @@ export default function LedgersPage() {
                           </span>
                         </td>
                       )}
-                      <td className="p-4 font-medium text-white">{entry.description || "Transaction"}</td>
+                      <td className="p-4 font-medium text-white max-w-[220px] min-w-[150px] whitespace-nowrap overflow-hidden text-ellipsis group/desc relative" title={entry.description || "Transaction"}>
+                        <span className="block truncate">{entry.description || "Transaction"}</span>
+                      </td>
                       <td className="p-4 whitespace-nowrap">
                         {entry.refType ? (
                           <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${

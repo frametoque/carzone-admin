@@ -25,9 +25,10 @@ const formatDate = (dateString: string) => {
 };
 
 const formatMoney = (value: any, currency = "LKR") => {
-  if (!value || isNaN(parseFloat(value))) return "N/A";
+  const num = parseFloat(value);
+  if (value === undefined || value === null || isNaN(num)) return "N/A";
   const currencySymbol = currency === "LKR" ? "Rs." : currency;
-  return `${currencySymbol} ${parseFloat(value).toLocaleString("en-US", {
+  return `${currencySymbol} ${num.toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
@@ -109,8 +110,8 @@ export default function AdminInvoicePage() {
   const subtotal = parseFloat(invoice.subtotal || 0);
   const discount = parseFloat(invoice.discount || 0);
   const advance = parseFloat(invoice.advance || 0);
-  const total = parseFloat(invoice.total || subtotal - discount);
-  const totalDue = parseFloat(invoice.total_due || total - advance);
+  const total = parseFloat(invoice.total ?? (subtotal - discount));
+  const totalDue = parseFloat(invoice.total_due ?? (total - advance));
 
   return (
     <div className="space-y-6 pb-20">

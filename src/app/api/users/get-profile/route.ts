@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken";
 import sql from "@/lib/db";
 //import db from "../../../../lib/db";
 
-const JWT_SECRET = process.env.JWT_SECRET || "super-secret-islandspares-jwt-token-key-change-me";
+const JWT_SECRET = process.env.JWT_SECRET || "super-secret-carzone-jwt-token-key-change-me";
 
 export async function GET() {
   try {
@@ -24,17 +24,17 @@ export async function GET() {
 
     // Load profile from admin_users
     let profile = {
-      fullName: decoded.fullName || "IslandSpares Admin",
-      email: decoded.email || "admin@islandspares.com",
+      fullName: decoded.fullName || "Carz One Admin",
+      email: decoded.email || "admin@carzone.lk",
       phone: "",
-      company: "IslandSpares",
-      website: "https://islandspares.com",
+      company: "Carz One",
+      website: "https://carzone.lk",
       address: "Colombo, Sri Lanka",
     };
 
     try {
       const dbUsers = await sql`
-        SELECT email, full_name, phone, company, website, address 
+        SELECT email, COALESCE(full_name, name) as full_name, phone, company, website, address 
         FROM admin_users 
         WHERE LOWER(email) = LOWER(${decoded.email})
       `;

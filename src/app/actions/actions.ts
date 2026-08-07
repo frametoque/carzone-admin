@@ -24,15 +24,42 @@ export async function getDashboardData(startDateString?: string, endDateString?:
   const endLimit = endDateString ? new Date(endDateString) : new Date("2099-12-31");
   endLimit.setHours(23, 59, 59, 999);
 
-  const incomes = await sql`SELECT category, amount, date FROM admin_incomes WHERE date >= ${startLimit} AND date <= ${endLimit}`;
-  const expenses = await sql`SELECT category, amount, date FROM admin_expenses WHERE date >= ${startLimit} AND date <= ${endLimit}`;
-  const unpaid = await sql`SELECT COUNT(*) as count FROM invoices WHERE payment_status = 'unpaid' AND date >= ${startLimit} AND date <= ${endLimit}`;
-  
-  // Backport initial balance dates to '2000-01-01'
-  await sql`UPDATE ledger_entries SET date = '2000-01-01'::date WHERE reference_type = 'initial' AND date > '2000-01-01'::date`;
+  // Cash flow chart date range
+  const refDate = endDateString ? new Date(endDateString) : new Date();
+  const startFlow = new Date(refDate.getFullYear(), refDate.getMonth() - 11, 1);
+  const endFlow = new Date(refDate.getFullYear(), refDate.getMonth() + 1, 0, 23, 59, 59, 999);
 
-  const compIncomes = await sql`SELECT category, amount, date FROM admin_incomes`;
-  const compExpenses = await sql`SELECT category, amount, date FROM admin_expenses`;
+  // Run all independent queries in parallel for speed
+  const [incomes, expenses, unpaid, compIncomes, compExpenses, flowIncomes, flowExpenses, recentInvoicesRaw, recentTransactionsRaw] = await Promise.all([
+    sql`SELECT category, amount, date FROM admin_incomes WHERE date >= ${startLimit} AND date <= ${endLimit}`,
+    sql`SELECT category, amount, date FROM admin_expenses WHERE date >= ${startLimit} AND date <= ${endLimit}`,
+    sql`SELECT COUNT(*) as count FROM invoices WHERE payment_status = 'unpaid' AND date >= ${startLimit} AND date <= ${endLimit}`,
+    sql`SELECT category, amount, date FROM admin_incomes`,
+    sql`SELECT category, amount, date FROM admin_expenses`,
+    sql`SELECT category, amount, date FROM admin_incomes WHERE date >= ${startFlow} AND date <= ${endFlow}`,
+    sql`SELECT category, amount, date FROM admin_expenses WHERE date >= ${startFlow} AND date <= ${endFlow}`,
+    sql`
+      SELECT
+        i.invoice_id as id,
+        COALESCE(ac.full_name, i.user_email, 'Unknown Client') as client,
+        i.total as amount,
+        i.payment_status as status
+      FROM invoices i
+      LEFT JOIN admin_clients ac ON 
+        (i.client_id IS NOT NULL AND i.client_id = ac.id) OR 
+        (i.client_id IS NULL AND i.user_email IS NOT NULL AND LOWER(i.user_email) = LOWER(ac.email))
+      WHERE i.date >= ${startLimit} AND i.date <= ${endLimit}
+      ORDER BY i.created_at DESC
+      LIMIT 4
+    `,
+    sql`
+      SELECT id, 'income' as type, description as name, date, amount FROM admin_incomes WHERE date >= ${startLimit} AND date <= ${endLimit}
+      UNION ALL
+      SELECT id, 'expense' as type, description as name, date, amount FROM admin_expenses WHERE date >= ${startLimit} AND date <= ${endLimit}
+      ORDER BY date DESC
+      LIMIT 5
+    `,
+  ]);
 
   let totalIncome = 0;
   let totalExpenses = 0;
@@ -109,7 +136,6 @@ export async function getDashboardData(startDateString?: string, endDateString?:
 
   // 3. Cash Flow Bipolar Stacked Data (Last 12 Months relative to filtered end date)
   const last12MonthsMap: Record<string, { name: string, monthNum: number, income: number, expenses: number, negativeExpenses: number, netChange: number }> = {};
-  const refDate = endDateString ? new Date(endDateString) : new Date();
   
   for (let i = 11; i >= 0; i--) {
     const d = new Date(refDate.getFullYear(), refDate.getMonth() - i, 1);
@@ -124,13 +150,6 @@ export async function getDashboardData(startDateString?: string, endDateString?:
       netChange: 0
     };
   }
-
-  // Load all incomes/expenses in last 12 months for cash flow chart consistency
-  const startFlow = new Date(refDate.getFullYear(), refDate.getMonth() - 11, 1);
-  const endFlow = new Date(refDate.getFullYear(), refDate.getMonth() + 1, 0, 23, 59, 59, 999);
-  
-  const flowIncomes = await sql`SELECT category, amount, date FROM admin_incomes WHERE date >= ${startFlow} AND date <= ${endFlow}`;
-  const flowExpenses = await sql`SELECT category, amount, date FROM admin_expenses WHERE date >= ${startFlow} AND date <= ${endFlow}`;
 
   flowIncomes.forEach((r: any) => {
     const entryDate = new Date(r.date);
@@ -154,29 +173,6 @@ export async function getDashboardData(startDateString?: string, endDateString?:
   });
 
   const cashFlowData = Object.values(last12MonthsMap);
-
-  const recentInvoicesRaw = await sql`
-    SELECT
-      i.invoice_id as id,
-      COALESCE(ac.full_name, i.user_email, 'Unknown Client') as client,
-      i.total as amount,
-      i.payment_status as status
-    FROM invoices i
-    LEFT JOIN admin_clients ac ON 
-      (i.client_id IS NOT NULL AND i.client_id = ac.id) OR 
-      (i.client_id IS NULL AND i.user_email IS NOT NULL AND LOWER(i.user_email) = LOWER(ac.email))
-    WHERE i.date >= ${startLimit} AND i.date <= ${endLimit}
-    ORDER BY i.created_at DESC
-    LIMIT 4
-  `;
-
-  const recentTransactionsRaw = await sql`
-    SELECT id, 'income' as type, description as name, date, amount FROM admin_incomes WHERE date >= ${startLimit} AND date <= ${endLimit}
-    UNION ALL
-    SELECT id, 'expense' as type, description as name, date, amount FROM admin_expenses WHERE date >= ${startLimit} AND date <= ${endLimit}
-    ORDER BY date DESC
-    LIMIT 5
-  `;
 
   return {
     totalIncome,
@@ -263,16 +259,16 @@ export async function createIncome(data: any) {
   }
 }
 
-export async function createClient(data: { name: string; email?: string | null; company?: string | null; phone?: string | null; address?: string | null }): Promise<string> {
+export async function createClient(data: { name: string; email?: string | null; company?: string | null; phone?: string | null; address?: string | null; birthday?: string | null }): Promise<string> {
   const clientId = 'C-' + Date.now();
   await sql`
-    INSERT INTO admin_clients (id, full_name, email, company, phone, address, active)
-    VALUES (${clientId}, ${data.name}, ${data.email || null}, ${data.company || null}, ${data.phone || null}, ${data.address || null}, true)
+    INSERT INTO admin_clients (id, full_name, email, company, phone, address, birthday, active)
+    VALUES (${clientId}, ${data.name}, ${data.email || null}, ${data.company || null}, ${data.phone || null}, ${data.address || null}, ${data.birthday || null}, true)
   `;
   return clientId;
 }
 
-export async function updateClient(clientId: string, data: { name?: string; email?: string | null; company?: string | null; phone?: string | null; address?: string | null }) {
+export async function updateClient(clientId: string, data: { name?: string; email?: string | null; company?: string | null; phone?: string | null; address?: string | null; birthday?: string | null }) {
   // Fetch current email first so we can cascade if it changes
   const existing = await sql`SELECT email FROM admin_clients WHERE id = ${clientId}`;
   if (existing.length === 0) throw new Error("Client not found");
@@ -288,7 +284,8 @@ export async function updateClient(clientId: string, data: { name?: string; emai
       email   = ${newEmail},
       company = ${data.company ?? null},
       phone   = ${data.phone   ?? null},
-      address = ${data.address ?? null}
+      address = ${data.address ?? null},
+      birthday = ${data.birthday ?? null}
     WHERE id = ${clientId}
   `;
 
@@ -503,6 +500,7 @@ export async function getInvoiceByIdAdmin(invoiceId: string) {
   // Join with admin_clients and bank_accs to get client name + billing address + bank account
   const result = await sql`
     SELECT
+      i.id,
       i.invoice_id,
       i.user_email,
       i.client_id,
@@ -530,7 +528,7 @@ export async function getInvoiceByIdAdmin(invoiceId: string) {
   const itemsResult = await sql`
     SELECT description, price, total, quantity 
     FROM invoice_items 
-    WHERE invoice_id = ${invoiceId}
+    WHERE invoice_id = ${invoiceId} OR invoice_id = ${String(invoice.id)}
     ORDER BY id ASC
   `;
 
@@ -571,6 +569,7 @@ export async function getClients() {
            c.company,
            c.phone,
            c.address,
+           c.birthday,
            c.clerk_id,
            (SELECT COUNT(*) FROM invoices i WHERE LOWER(i.user_email) = LOWER(c.email)) as invoices,
            COALESCE((SELECT SUM(amount) FROM admin_incomes inc WHERE inc.client_id = c.id), 0) as revenue,
@@ -587,6 +586,7 @@ export async function getClients() {
     company: r.company,
     phone: r.phone,
     address: r.address,
+    birthday: r.birthday,
     imageUrl: null,
     invoices: parseInt(r.invoices),
     revenue: parseFloat(r.revenue),
@@ -595,6 +595,35 @@ export async function getClients() {
   }));
 
   return clients;
+}
+
+export async function getTodayBirthdays() {
+  const allClients = await sql`
+    SELECT id, full_name as name, email, phone, birthday
+    FROM admin_clients
+    WHERE birthday IS NOT NULL AND birthday != ''
+  `;
+
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1; // 1-12
+  const currentDay = now.getDate(); // 1-31
+
+  const todayBirthdays = allClients.filter(c => {
+    if (!c.birthday) return false;
+    const parts = c.birthday.split('-');
+    if (parts.length < 3) return false;
+    const month = parseInt(parts[1], 10);
+    const day = parseInt(parts[2], 10);
+    return month === currentMonth && day === currentDay;
+  });
+
+  return todayBirthdays.map(c => ({
+    id: c.id,
+    name: c.name || c.email?.split('@')[0] || 'Client',
+    phone: c.phone,
+    email: c.email,
+    birthday: c.birthday
+  }));
 }
 
 
@@ -607,6 +636,7 @@ export async function getClientById(clientId: string) {
            c.company,
            c.phone,
            c.address,
+           c.birthday,
            c.clerk_id,
            c.website
     FROM admin_clients c
@@ -1288,10 +1318,11 @@ export async function syncLedgerEntry(
   if (accountId) {
     const debit = refType === 'income' ? amount : 0;
     const credit = refType === 'expense' ? amount : 0;
+    const typeVal = debit > 0 ? 'Debit' : (credit > 0 ? 'Credit' : 'Credit');
     const entryDate = combineDateWithCurrentTime(date);
     await sql`
-      INSERT INTO ledger_entries (account_id, date, description, debit, credit, running_balance, reference_type, reference_id)
-      VALUES (${accountId}, ${entryDate}, ${description}, ${debit}, ${credit}, 0, ${refType}, ${strRefId})
+      INSERT INTO ledger_entries (account_id, date, description, type, debit, credit, running_balance, reference_type, reference_id)
+      VALUES (${accountId}, ${entryDate}, ${description}, ${typeVal}, ${debit}, ${credit}, 0, ${refType}, ${strRefId})
     `;
   }
 
@@ -1327,6 +1358,7 @@ export async function getAccounts() {
   return rows.map(r => ({
     ...r,
     id: parseInt(r.id),
+    type: (r.type || "").toLowerCase(),
     initialBalance: parseFloat(r.initialBalance),
     currentBalance: parseFloat(r.currentBalance),
     totalInflow: parseFloat(r.totalInflow),
@@ -1346,9 +1378,10 @@ export async function createAccount(data: any) {
     const amt = parseFloat(data.initialBalance);
     const debit = amt > 0 ? amt : 0;
     const credit = amt < 0 ? -amt : 0;
+    const typeVal = debit > 0 ? 'Debit' : 'Credit';
     await sql`
-      INSERT INTO ledger_entries (account_id, date, description, debit, credit, running_balance, reference_type, reference_id)
-      VALUES (${newId}, '2000-01-01'::date, 'Initial Balance', ${debit}, ${credit}, ${amt}, 'initial', ${String(newId)})
+      INSERT INTO ledger_entries (account_id, date, description, type, debit, credit, running_balance, reference_type, reference_id)
+      VALUES (${newId}, '2000-01-01'::date, 'Initial Balance', ${typeVal}, ${debit}, ${credit}, ${amt}, 'initial', ${String(newId)})
     `;
     await recalculateLedger(newId);
   }
@@ -1381,18 +1414,20 @@ export async function updateAccount(id: number, data: any) {
     } else {
       const debit = amt > 0 ? amt : 0;
       const credit = amt < 0 ? -amt : 0;
+      const typeVal = debit > 0 ? 'Debit' : 'Credit';
       await sql`
         UPDATE ledger_entries 
-        SET debit = ${debit}, credit = ${credit} 
+        SET debit = ${debit}, credit = ${credit}, type = ${typeVal} 
         WHERE id = ${existingInitial[0].id}
       `;
     }
   } else if (amt !== 0) {
     const debit = amt > 0 ? amt : 0;
     const credit = amt < 0 ? -amt : 0;
+    const typeVal = debit > 0 ? 'Debit' : 'Credit';
     await sql`
-      INSERT INTO ledger_entries (account_id, date, description, debit, credit, running_balance, reference_type, reference_id)
-      VALUES (${id}, '2000-01-01'::date, 'Initial Balance', ${debit}, ${credit}, ${amt}, 'initial', ${String(id)})
+      INSERT INTO ledger_entries (account_id, date, description, type, debit, credit, running_balance, reference_type, reference_id)
+      VALUES (${id}, '2000-01-01'::date, 'Initial Balance', ${typeVal}, ${debit}, ${credit}, ${amt}, 'initial', ${String(id)})
     `;
   }
 
@@ -1493,9 +1528,10 @@ export async function createManualJournalEntry(
     const credit = line.credit || 0;
     if (debit === 0 && credit === 0) continue; // Skip empty entries
 
+    const typeVal = debit > 0 ? 'Debit' : 'Credit';
     await sql`
-      INSERT INTO ledger_entries (account_id, date, description, debit, credit, running_balance, reference_type, reference_id)
-      VALUES (${line.accountId}, ${entryDate}, ${description}, ${debit}, ${credit}, 0, ${refType}, ${refId})
+      INSERT INTO ledger_entries (account_id, date, description, type, debit, credit, running_balance, reference_type, reference_id)
+      VALUES (${line.accountId}, ${entryDate}, ${description}, ${typeVal}, ${debit}, ${credit}, 0, ${refType}, ${refId})
     `;
   }
 
@@ -1543,9 +1579,10 @@ export async function updateManualJournalEntry(
     const credit = line.credit || 0;
     if (debit === 0 && credit === 0) continue;
 
+    const typeVal = debit > 0 ? 'Debit' : 'Credit';
     await sql`
-      INSERT INTO ledger_entries (account_id, date, description, debit, credit, running_balance, reference_type, reference_id)
-      VALUES (${line.accountId}, ${entryDate}, ${description}, ${debit}, ${credit}, 0, ${refType}, ${refId})
+      INSERT INTO ledger_entries (account_id, date, description, type, debit, credit, running_balance, reference_type, reference_id)
+      VALUES (${line.accountId}, ${entryDate}, ${description}, ${typeVal}, ${debit}, ${credit}, 0, ${refType}, ${refId})
     `;
   }
 
@@ -1592,4 +1629,76 @@ export async function getJournalEntry(refId: string) {
     credit: parseFloat(r.credit || 0),
     refType: r.refType
   }));
+}
+
+// ─── VEHICLE STOCK ACTIONS ───────────────────────────────────
+export async function getVehicleStock() {
+  const rows = await sql`
+    SELECT 
+      id, make, model, year, vin, reg_number as "regNumber", color,
+      mileage, fuel_type as "fuelType", transmission, buy_price as "buyPrice",
+      asking_price as "askingPrice", status, description, image_url as "imageUrl",
+      created_at as "createdAt"
+    FROM vehicle_stock
+    ORDER BY created_at DESC
+  `;
+  return rows.map((r: any) => ({
+    id: parseInt(r.id),
+    make: r.make,
+    model: r.model,
+    year: parseInt(r.year || 0),
+    vin: r.vin || "",
+    regNumber: r.regNumber || "",
+    color: r.color || "",
+    mileage: parseInt(r.mileage || 0),
+    fuelType: r.fuelType || "Petrol",
+    transmission: r.transmission || "Automatic",
+    buyPrice: parseFloat(r.buyPrice || 0),
+    askingPrice: parseFloat(r.askingPrice || 0),
+    status: r.status || "Available",
+    description: r.description || "",
+    imageUrl: r.imageUrl || ""
+  }));
+}
+
+export async function createVehicleStock(data: any) {
+  await sql`
+    INSERT INTO vehicle_stock (
+      make, model, year, vin, reg_number, color, mileage,
+      fuel_type, transmission, buy_price, asking_price, status, description, image_url
+    )
+    VALUES (
+      ${data.make}, ${data.model}, ${data.year}, ${data.vin || null}, ${data.regNumber || null},
+      ${data.color || null}, ${data.mileage || 0}, ${data.fuelType || 'Petrol'}, ${data.transmission || 'Automatic'},
+      ${data.buyPrice || 0}, ${data.askingPrice || 0}, ${data.status || 'Available'}, ${data.description || null},
+      ${data.imageUrl || null}
+    )
+  `;
+}
+
+export async function updateVehicleStock(id: number, data: any) {
+  await sql`
+    UPDATE vehicle_stock
+    SET 
+      make = ${data.make},
+      model = ${data.model},
+      year = ${data.year},
+      vin = ${data.vin || null},
+      reg_number = ${data.regNumber || null},
+      color = ${data.color || null},
+      mileage = ${data.mileage || 0},
+      fuel_type = ${data.fuelType || 'Petrol'},
+      transmission = ${data.transmission || 'Automatic'},
+      buy_price = ${data.buyPrice || 0},
+      asking_price = ${data.askingPrice || 0},
+      status = ${data.status || 'Available'},
+      description = ${data.description || null},
+      image_url = ${data.imageUrl || null},
+      updated_at = CURRENT_TIMESTAMP
+    WHERE id = ${id}
+  `;
+}
+
+export async function deleteVehicleStock(id: number) {
+  await sql`DELETE FROM vehicle_stock WHERE id = ${id}`;
 }

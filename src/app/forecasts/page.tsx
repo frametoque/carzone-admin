@@ -1,0 +1,371 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
+import { getForecastsAnalysisData, generateAIForecast, SystemAnalysisData } from "../actions/forecastActions";
+
+const formatLKR = (amount: number) => {
+  return new Intl.NumberFormat('en-LK', {
+    style: 'currency',
+    currency: 'LKR',
+    maximumFractionDigits: 0
+  }).format(amount || 0);
+};
+
+export default function ForecastsPage() {
+  const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
+  const [analysisData, setAnalysisData] = useState<SystemAnalysisData | null>(null);
+  const [aiResult, setAiResult] = useState<any | null>(null);
+  const [activeTab, setActiveTab] = useState<"overview" | "acquisitions" | "marketing" | "risks">("overview");
+
+  const loadAllForecasts = async () => {
+    setLoading(true);
+    try {
+      const systemData = await getForecastsAnalysisData();
+      setAnalysisData(systemData);
+      
+      const forecast = await generateAIForecast(systemData);
+      setAiResult(forecast);
+    } catch (e) {
+      console.error("Error loading forecasts:", e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRegenerate = async () => {
+    if (!analysisData) return;
+    setGenerating(true);
+    try {
+      const forecast = await generateAIForecast(analysisData);
+      setAiResult(forecast);
+    } catch (e) {
+      console.error("Error regenerating forecast:", e);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  useEffect(() => {
+    loadAllForecasts();
+
+    const handleRefreshEvent = () => {
+      handleRegenerate();
+    };
+    window.addEventListener("forecasts:refresh", handleRefreshEvent);
+    return () => {
+      window.removeEventListener("forecasts:refresh", handleRefreshEvent);
+    };
+  }, []);
+
+  if (loading || !analysisData) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-[#ffffff] border border-[#e2e8f0] rounded-3xl p-10 text-center space-y-4 shadow-xs">
+          <div className="w-12 h-12 rounded-full bg-[#002f4c]/10 text-[#002f4c] mx-auto flex items-center justify-center">
+            <Loader2 className="w-6 h-6 animate-spin text-[#002f4c]" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-[#0f172a]">Analyzing Carz One Motor Trading Data...</h2>
+            <p className="text-sm text-[#64748b] mt-1">Aggregating historical sales, vehicle inventory stock, income ledgers, and expenses.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const { metrics } = analysisData;
+
+  return (
+    <div className="space-y-6 pb-20">
+      {/* Core Metrics Quick Cards (Top) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-[#ffffff] border border-[#e2e8f0] rounded-2xl p-5 shadow-xs">
+          <p className="text-xs font-medium text-[#64748b]">Total System Revenue</p>
+          <p className="text-2xl font-bold text-[#0f172a] mt-1">{formatLKR(metrics.totalRevenue)}</p>
+          <p className="text-[11px] text-[#15803d] font-semibold mt-1">
+            Net Profit: {formatLKR(metrics.netProfit)} ({metrics.profitMarginPercent}%)
+          </p>
+        </div>
+
+        <div className="bg-[#ffffff] border border-[#e2e8f0] rounded-2xl p-5 shadow-xs">
+          <p className="text-xs font-medium text-[#64748b]">Monthly Revenue Velocity</p>
+          <p className="text-2xl font-bold text-[#0284c7] mt-1">{formatLKR(metrics.avgMonthlyRevenue)}</p>
+          <p className="text-[11px] text-[#64748b] mt-1">Avg Monthly Expenses: {formatLKR(metrics.avgMonthlyExpense)}</p>
+        </div>
+
+        <div className="bg-[#ffffff] border border-[#e2e8f0] rounded-2xl p-5 shadow-xs">
+          <p className="text-xs font-medium text-[#64748b]">Active Vehicle Inventory</p>
+          <p className="text-2xl font-bold text-[#002f4c] mt-1">{metrics.stockCount} Vehicles</p>
+          <p className="text-[11px] text-[#64748b] mt-1">Valued at {formatLKR(metrics.activeStockValue)}</p>
+        </div>
+
+        <div className="bg-[#ffffff] border border-[#e2e8f0] rounded-2xl p-5 shadow-xs">
+          <p className="text-xs font-medium text-[#64748b]">Unpaid Receivables</p>
+          <p className="text-2xl font-bold text-[#b91c1c] mt-1">{formatLKR(metrics.unpaidInvoiceAmount)}</p>
+          <p className="text-[11px] text-[#b45309] font-medium mt-1">Across {metrics.unpaidInvoiceCount} pending client invoices</p>
+        </div>
+      </div>
+
+      {/* Control Toolbar & Tabs (Below Stat Cards) */}
+      <div className="flex items-center gap-2 overflow-x-auto w-full">
+        {[
+          { id: "overview", label: "Executive Forecast" },
+          { id: "acquisitions", label: "Vehicle Restocking" },
+          { id: "marketing", label: "Marketing Strategy" },
+          { id: "risks", label: "Risk Mitigation" },
+        ].map((tab) => {
+          const active = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              style={active ? { color: "#ffffff", backgroundColor: "#002f4c" } : {}}
+              className={`px-5 py-2.5 rounded-full text-xs font-bold transition-colors cursor-pointer ${
+                active
+                  ? "shadow-sm"
+                  : "bg-[#ffffff] border border-[#cbd5e1] text-[#334155] hover:bg-[#f1f5f9] hover:text-[#0f172a]"
+              }`}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Tab 1: Executive Overview & Next Quarter Forecast */}
+      {activeTab === "overview" && aiResult && (
+        <div className="space-y-6">
+          {/* Executive AI Summary Box */}
+          <div className="bg-[#ffffff] border border-[#e2e8f0] rounded-3xl p-6 shadow-xs space-y-4">
+            <div className="text-[#002f4c] font-bold text-sm">
+              Executive AI Synthesis
+            </div>
+            <p className="text-sm text-[#334155] leading-relaxed font-medium bg-[#f8fafc] border border-[#e2e8f0] rounded-2xl p-4">
+              "{aiResult.executiveSummary}"
+            </p>
+          </div>
+
+          {/* Revenue Forecast Card */}
+          <div className="bg-[#ffffff] border border-[#e2e8f0] rounded-3xl p-6 shadow-xs space-y-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#e2e8f0] pb-4">
+              <div>
+                <h3 className="text-lg font-bold text-[#0f172a]">Next Quarter Financial Forecast (Q3 Projections)</h3>
+                <p className="text-xs text-[#64748b]">Predictive estimation calculated from current monthly run-rate & historic growth velocity</p>
+              </div>
+
+              <div className="inline-flex items-center px-3 py-1 rounded-full bg-[#f1f5f9] border border-[#cbd5e1] text-xs font-semibold text-[#002f4c]">
+                Source: {aiResult.revenueForecastNextQuarter?.dataSource || "Invoices & Ledger Records"}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="p-4 rounded-2xl bg-[#f8fafc] border border-[#e2e8f0]">
+                <p className="text-xs text-[#64748b] font-medium">Projected Q3 Revenue</p>
+                <p className="text-xl font-bold text-[#15803d] mt-1">{formatLKR(aiResult.revenueForecastNextQuarter?.projectedRevenue)}</p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-[#f8fafc] border border-[#e2e8f0]">
+                <p className="text-xs text-[#64748b] font-medium">Projected Q3 Expenses</p>
+                <p className="text-xl font-bold text-[#b91c1c] mt-1">{formatLKR(aiResult.revenueForecastNextQuarter?.projectedExpenses)}</p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-[#f8fafc] border border-[#e2e8f0]">
+                <p className="text-xs text-[#64748b] font-medium">Projected Net Profit</p>
+                <p className="text-xl font-bold text-[#002f4c] mt-1">{formatLKR(aiResult.revenueForecastNextQuarter?.projectedNetProfit)}</p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-[#f8fafc] border border-[#e2e8f0]">
+                <p className="text-xs text-[#64748b] font-medium">Est. Growth Rate</p>
+                <p className="text-xl font-bold text-[#0284c7] mt-1">+{aiResult.revenueForecastNextQuarter?.growthRatePercent}%</p>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-[#f1f5f9]/60 border border-[#e2e8f0]">
+              <h4 className="text-xs font-bold text-[#0f172a] uppercase tracking-wider mb-1">Analytical Explanation & Rationale</h4>
+              <p className="text-xs text-[#334155] leading-relaxed">{aiResult.revenueForecastNextQuarter?.explanation}</p>
+            </div>
+          </div>
+
+          {/* Actionable Milestones Checklist */}
+          <div className="bg-[#ffffff] border border-[#e2e8f0] rounded-3xl p-6 shadow-xs space-y-4">
+            <h3 className="text-base font-bold text-[#0f172a]">
+              Actionable Dealership Milestones
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {aiResult.actionableMilestones?.map((milestone: string, idx: number) => (
+                <div key={idx} className="p-4 rounded-2xl bg-[#f8fafc] border border-[#e2e8f0] flex items-start gap-3">
+                  <span className="w-6 h-6 rounded-full bg-[#002f4c] text-[#ffffff] flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
+                    {idx + 1}
+                  </span>
+                  <p className="text-xs text-[#334155] font-medium leading-relaxed">{milestone}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 2: Vehicle Acquisition Plan */}
+      {activeTab === "acquisitions" && aiResult && (
+        <div className="space-y-6">
+          <div className="bg-[#ffffff] border border-[#e2e8f0] rounded-3xl p-6 shadow-xs space-y-4">
+            <div>
+              <h3 className="text-lg font-bold text-[#0f172a]">AI Vehicle Restocking & Acquisition Plan</h3>
+              <p className="text-xs text-[#64748b]">Recommended vehicle models to acquire based on historical turnover and buyer demand</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {aiResult.vehicleAcquisitionPlan?.map((plan: any, idx: number) => (
+                <div key={idx} className="bg-[#f8fafc] border border-[#e2e8f0] rounded-2xl p-5 flex flex-col justify-between space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="px-2.5 py-1 text-xs font-bold rounded-full bg-[#002f4c] text-[#ffffff]">
+                        {plan.action}
+                      </span>
+                      <span className="text-xs font-semibold text-[#15803d]">Est. ROI: {plan.expectedROI}</span>
+                    </div>
+
+                    <h4 className="font-bold text-[#0f172a] text-base">{plan.modelName}</h4>
+                    <p className="text-xs text-[#334155] leading-relaxed">{plan.rationale}</p>
+                  </div>
+
+                  <div className="pt-3 border-t border-[#e2e8f0] space-y-2 text-xs">
+                    <div className="flex justify-between text-[#64748b]">
+                      <span>Target Units:</span>
+                      <span className="font-semibold text-[#0f172a]">{plan.recommendedUnits} Units</span>
+                    </div>
+                    <div className="flex justify-between text-[#64748b]">
+                      <span>Est. Unit Price:</span>
+                      <span className="font-semibold text-[#0f172a]">{formatLKR(plan.estimatedUnitCost)}</span>
+                    </div>
+
+                    <div className="p-2 rounded-xl bg-[#ffffff] border border-[#e2e8f0] text-[11px] text-[#64748b] mt-2">
+                      <span>{plan.dataSource}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Top Vehicle Sales Performance Reference Table */}
+          <div className="bg-[#ffffff] border border-[#e2e8f0] rounded-3xl overflow-hidden shadow-xs">
+            <div className="p-6 border-b border-[#e2e8f0]">
+              <h4 className="font-bold text-[#0f172a]">Historical Vehicle Model Performance (System Data)</h4>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-[#e2e8f0] text-[#64748b] bg-[#f8fafc]">
+                    <th className="p-4 font-semibold">Make & Model</th>
+                    <th className="p-4 font-semibold">Active Inventory</th>
+                    <th className="p-4 font-semibold">Total Sales Revenue</th>
+                    <th className="p-4 font-semibold">Est. Sales Margin</th>
+                    <th className="p-4 font-semibold">Data Source</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#f1f5f9]">
+                  {analysisData.vehiclePerformance.map((vp, idx) => (
+                    <tr key={idx} className="hover:bg-[#f8fafc]">
+                      <td className="p-4 font-bold text-[#0f172a]">{vp.make} {vp.model}</td>
+                      <td className="p-4 text-[#334155]">{vp.inventoryCount} Units ({formatLKR(vp.totalInvestment)})</td>
+                      <td className="p-4 font-semibold text-[#15803d]">{formatLKR(vp.totalSalesRevenue)}</td>
+                      <td className="p-4 font-semibold text-[#002f4c]">{vp.estimatedMargin}%</td>
+                      <td className="p-4 text-[#64748b] text-[11px]">Vehicle Stock & Incomes Table</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 3: Marketing Strategies */}
+      {activeTab === "marketing" && aiResult && (
+        <div className="space-y-6">
+          <div className="bg-[#ffffff] border border-[#e2e8f0] rounded-3xl p-6 shadow-xs space-y-6">
+            <div>
+              <h3 className="text-lg font-bold text-[#0f172a]">Targeted Marketing & Capital Allocation</h3>
+              <p className="text-xs text-[#64748b]">AI recommended promotional strategies based on expense breakdowns and high-value buyer profiles</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {aiResult.marketingStrategies?.map((strat: any, idx: number) => (
+                <div key={idx} className="bg-[#f8fafc] border border-[#e2e8f0] rounded-2xl p-6 space-y-4">
+                  <div className="flex items-center justify-between border-b border-[#e2e8f0] pb-3">
+                    <h4 className="font-bold text-[#0f172a] text-base">{strat.strategy}</h4>
+                    <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-sky-50 text-[#0284c7] border border-sky-200">
+                      {strat.focusArea}
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-[#334155] leading-relaxed">{strat.rationale}</p>
+
+                  <div className="grid grid-cols-2 gap-3 pt-2">
+                    <div className="p-3 rounded-xl bg-[#ffffff] border border-[#e2e8f0]">
+                      <p className="text-[11px] text-[#64748b]">Recommended Budget</p>
+                      <p className="text-sm font-bold text-[#002f4c] mt-0.5">{formatLKR(strat.recommendedBudgetLKR)}</p>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-[#ffffff] border border-[#e2e8f0]">
+                      <p className="text-[11px] text-[#64748b]">Expected Revenue Impact</p>
+                      <p className="text-sm font-bold text-[#15803d] mt-0.5">{strat.expectedRevenueImpact}</p>
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-[#ffffff] border border-[#e2e8f0] text-[11px] text-[#64748b]">
+                    <span>Data Source: {strat.dataSource}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 4: Cash Flow Risk Mitigation */}
+      {activeTab === "risks" && aiResult && (
+        <div className="space-y-6">
+          <div className="bg-[#ffffff] border border-[#e2e8f0] rounded-3xl p-6 shadow-xs space-y-6">
+            <div>
+              <h3 className="text-lg font-bold text-[#0f172a]">Cash Flow & Financial Risk Mitigation</h3>
+              <p className="text-xs text-[#64748b]">Proactive detection of capital bottlenecks and receivables exposure</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {aiResult.cashFlowRiskMitigation?.map((risk: any, idx: number) => {
+                const isHigh = risk.impactSeverity === "HIGH";
+                return (
+                  <div key={idx} className="bg-[#f8fafc] border border-[#e2e8f0] rounded-2xl p-6 space-y-4">
+                    <div className="flex items-center justify-between border-b border-[#e2e8f0] pb-3">
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-bold text-[#0f172a] text-base">{risk.risk}</h4>
+                      </div>
+                      <span className={`px-2.5 py-1 text-xs font-bold rounded-full border ${
+                        isHigh ? "bg-red-50 text-[#b91c1c] border-red-200" : "bg-amber-50 text-[#b45309] border-amber-200"
+                      }`}>
+                        {risk.impactSeverity} IMPACT
+                      </span>
+                    </div>
+
+                    <div>
+                      <p className="text-xs font-bold text-[#0f172a] mb-1">Recommended Action:</p>
+                      <p className="text-xs text-[#334155] leading-relaxed">{risk.recommendedAction}</p>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-[#ffffff] border border-[#e2e8f0] text-[11px] text-[#64748b]">
+                      <span>Data Source: {risk.dataSource}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

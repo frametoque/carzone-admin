@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search, Plus, Edit2, Trash2, X, Loader2, ChevronRight, Users, Crown, Sparkles, Clock } from "lucide-react";
+import { Search, Plus, Edit2, Trash2, X, Loader2, ChevronRight, Users, Crown, Sparkles, Clock, Cake, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import { getClients, createClient, updateClient, deleteClient } from "../actions/actions";
 import { SkeletonCards, SkeletonTable } from "../components/SkeletonUI";
@@ -9,7 +9,19 @@ import { SkeletonCards, SkeletonTable } from "../components/SkeletonUI";
 const formatLKR = (amount: number) =>
   new Intl.NumberFormat('en-LK', { style: 'currency', currency: 'LKR' }).format(amount || 0);
 
-const emptyForm = { name: '', email: '', company: '', phone: '', address: '' };
+const getBirthdayMessage = (clientName: string) => {
+  return "\u{1F389} Happy Birthday, " + clientName + "! \u{1F382}\u{1F697}\n\nThe entire *Carz One Motor Trading* team wishes you a fantastic birthday filled with happiness, success, and unforgettable moments! \u{1F973}\u{2728}\n\nMay your journey ahead be filled with new opportunities, exciting adventures, and many miles of success. \u{1F6E3}\u{FE0F}\u{1F3C6}\n\n*Keep moving forward. Keep chasing your dreams!* \u{1F698}\u{1F4A8}\n\n*Carz One Motor Trading*";
+};
+
+const sendWhatsAppWish = (phone: string | undefined, clientName: string) => {
+  const cleanPhone = phone ? phone.replace(/[^0-9]/g, '') : '';
+  const rawText = getBirthdayMessage(clientName);
+  const msg = encodeURIComponent(rawText);
+  const url = cleanPhone ? `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${msg}` : `https://api.whatsapp.com/send?text=${msg}`;
+  window.open(url, '_blank');
+};
+
+const emptyForm = { name: '', email: '', company: '', phone: '', address: '', birthday: '' };
 
 export default function ClientsPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -51,6 +63,7 @@ export default function ClientsPage() {
       company: client.company || '',
       phone: client.phone || '',
       address: client.address || '',
+      birthday: client.birthday || '',
     });
     setIsModalOpen(true);
   };
@@ -66,6 +79,7 @@ export default function ClientsPage() {
           company: formData.company || null,
           phone: formData.phone || null,
           address: formData.address || null,
+          birthday: formData.birthday || null,
         });
       } else {
         await createClient({
@@ -74,6 +88,7 @@ export default function ClientsPage() {
           company: formData.company || null,
           phone: formData.phone || null,
           address: formData.address || null,
+          birthday: formData.birthday || null,
         });
       }
       setIsModalOpen(false);
@@ -197,11 +212,11 @@ export default function ClientsPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden">
+      <div className="bg-[#ffffff] border border-[#e2e8f0] rounded-3xl overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-white/10 text-gray-400 text-sm">
+              <tr className="border-b border-[#e2e8f0] text-[#64748b] text-sm">
                 <th className="p-4 font-medium">Client</th>
                 <th className="p-4 font-medium hidden md:table-cell">Company</th>
                 <th className="p-4 font-medium hidden sm:table-cell">Phone</th>
@@ -211,7 +226,7 @@ export default function ClientsPage() {
                 <th className="p-4 font-medium text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-[#f1f5f9] text-[#0f172a]">
               {filteredClients.map((client: any) => {
                 const linked = isLinked(client);
                 const isDeleting = deletingId === client.id;
@@ -219,49 +234,74 @@ export default function ClientsPage() {
                   ? `Cannot delete — this client has linked invoices, income, or projects`
                   : `Delete ${client.name}`;
 
+                // Check if client has a birthday today
+                let isBirthdayToday = false;
+                if (client.birthday) {
+                  const parts = client.birthday.split('-');
+                  if (parts.length >= 3) {
+                    const month = parseInt(parts[1], 10);
+                    const day = parseInt(parts[2], 10);
+                    const now = new Date();
+                    isBirthdayToday = (month === (now.getMonth() + 1)) && (day === now.getDate());
+                  }
+                }
+
                 return (
-                  <tr key={client.id} className="hover:bg-white/5 transition-colors group">
+                  <tr key={client.id} className="hover:bg-[#f8fafc] transition-colors group">
                     <td className="p-4">
-                      <div className="flex items-center gap-3">
-                        {client.imageUrl ? (
-                          <img src={client.imageUrl} alt={client.name} className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
-                        ) : (
-                          <div className="w-9 h-9 rounded-full bg-brand-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                            {client.name.charAt(0)}
-                          </div>
-                        )}
-                        <div>
-                          <p className="font-semibold text-white text-sm">{client.name}</p>
-                          <p className="text-xs text-gray-500">{client.email || 'No email'}</p>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold text-[#0f172a] text-sm">{client.name}</p>
+                          {isBirthdayToday && (
+                            <button
+                              onClick={() => sendWhatsAppWish(client.phone, client.name)}
+                              title={`Send WhatsApp Birthday Wish to ${client.name}`}
+                              className="px-2 py-0.5 bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded-full text-amber-900 transition-colors flex items-center gap-1 text-[11px] font-bold animate-pulse"
+                            >
+                              <Cake className="w-3 h-3 text-amber-600" />
+                              <span>Birthday Wish</span>
+                            </button>
+                          )}
                         </div>
+                        <p className="text-xs text-[#64748b]">{client.email || 'No email'}</p>
                       </div>
                     </td>
-                    <td className="p-4 text-sm text-gray-300 hidden md:table-cell">
+                    <td className="p-4 text-sm hidden md:table-cell">
                       {client.company
-                        ? <span className="text-brand-400">{client.company}</span>
-                        : <span className="text-gray-600">—</span>}
+                        ? <span className="text-[#002f4c] font-semibold">{client.company}</span>
+                        : <span className="text-[#94a3b8]">—</span>}
                     </td>
-                    <td className="p-4 text-sm text-gray-300 hidden sm:table-cell">
-                      {client.phone || <span className="text-gray-600">—</span>}
+                    <td className="p-4 text-sm text-[#334155] hidden sm:table-cell whitespace-nowrap">
+                      {client.phone || <span className="text-[#94a3b8]">—</span>}
                     </td>
-                    <td className="p-4 hidden lg:table-cell">
+                    <td className="p-4 hidden lg:table-cell whitespace-nowrap">
                       {client.active
-                        ? <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-green-500/20 text-green-400 border border-green-500/30">Active</span>
-                        : <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-gray-500/20 text-gray-400 border border-gray-500/30">Inactive</span>}
+                        ? <span className="px-3 py-1 text-xs font-semibold rounded-full bg-emerald-50 text-[#15803d] border border-emerald-200">Active</span>
+                        : <span className="px-3 py-1 text-xs font-semibold rounded-full bg-slate-100 text-[#64748b] border border-slate-200">Inactive</span>}
                     </td>
-                    <td className="p-4 text-sm text-gray-300 hidden sm:table-cell">
+                    <td className="p-4 text-sm text-[#334155] hidden sm:table-cell whitespace-nowrap">
                       {client.invoices}
                     </td>
-                    <td className="p-4 font-semibold text-brand-400 text-sm">
+                    <td className="p-4 font-semibold text-[#15803d] text-sm whitespace-nowrap">
                       {formatLKR(client.revenue)}
                     </td>
-                    <td className="p-4">
+                    <td className="p-4 whitespace-nowrap">
                       <div className="flex items-center justify-end gap-1">
+                        {/* Send WhatsApp Birthday Wish (only if today is birthday) */}
+                        {isBirthdayToday && (
+                          <button
+                            onClick={() => sendWhatsAppWish(client.phone, client.name)}
+                            title={`Send WhatsApp Birthday Wish to ${client.name}`}
+                            className="p-2 bg-amber-50 hover:bg-amber-100 rounded-xl transition-colors text-amber-700 font-medium"
+                          >
+                            <Cake className="w-4 h-4 text-amber-600" />
+                          </button>
+                        )}
                         {/* Edit */}
                         <button
                           onClick={() => openEdit(client)}
                           title="Edit client"
-                          className="p-2 hover:bg-white/10 rounded-xl transition-colors text-gray-400 hover:text-white"
+                          className="p-2 hover:bg-[#f1f5f9] rounded-xl transition-colors text-[#64748b] hover:text-[#0f172a]"
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
@@ -273,14 +313,14 @@ export default function ClientsPage() {
                           disabled={linked || isDeleting}
                           className={`p-2 rounded-xl transition-colors ${
                             linked
-                              ? "text-gray-700 cursor-not-allowed"
+                              ? "text-[#cbd5e1] cursor-not-allowed"
                               : isDeleting
-                              ? "text-red-400 opacity-50 cursor-wait"
-                              : "text-gray-400 hover:text-red-400 hover:bg-red-400/10"
+                              ? "text-red-500 opacity-50 cursor-wait"
+                              : "text-[#64748b] hover:text-red-600 hover:bg-red-50"
                           }`}
                         >
                           {isDeleting
-                            ? <Loader2 className="w-4 h-4 animate-spin" />
+                            ? <Loader2 className="w-4 h-4 animate-spin text-red-500" />
                             : <Trash2 className="w-4 h-4" />}
                         </button>
 
@@ -288,7 +328,7 @@ export default function ClientsPage() {
                         <Link
                           href={`/clients/${client.id}`}
                           title="View client profile & history"
-                          className="p-2 hover:bg-brand-400/10 rounded-xl transition-colors text-gray-400 hover:text-brand-400"
+                          className="p-2 hover:bg-[#f1f5f9] rounded-xl transition-colors text-[#64748b] hover:text-[#002f4c]"
                         >
                           <ChevronRight className="w-4 h-4" />
                         </Link>
@@ -299,9 +339,7 @@ export default function ClientsPage() {
               })}
               {filteredClients.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="p-10 text-center text-gray-500">
-                    {searchTerm ? 'No clients match your search.' : 'No clients yet. Add your first client!'}
-                  </td>
+                  <td colSpan={7} className="p-8 text-center text-[#64748b]">No clients found.</td>
                 </tr>
               )}
             </tbody>
@@ -387,15 +425,26 @@ export default function ClientsPage() {
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-sm text-gray-400">Address</label>
-                <input
-                  type="text"
-                  placeholder="(optional)"
-                  value={formData.address}
-                  onChange={e => setFormData({ ...formData, address: e.target.value })}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-sm"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-sm text-gray-400">Birthday</label>
+                  <input
+                    type="date"
+                    value={formData.birthday}
+                    onChange={e => setFormData({ ...formData, birthday: e.target.value })}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-sm text-white"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm text-gray-400">Address</label>
+                  <input
+                    type="text"
+                    placeholder="(optional)"
+                    value={formData.address}
+                    onChange={e => setFormData({ ...formData, address: e.target.value })}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 outline-none focus:border-brand-500 transition-colors text-sm"
+                  />
+                </div>
               </div>
             </div>
 

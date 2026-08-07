@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import jwt from "jsonwebtoken";
 
-const JWT_SECRET = process.env.JWT_SECRET || "super-secret-islandspares-jwt-token-key-change-me";
+const JWT_SECRET = process.env.JWT_SECRET || "super-secret-carzone-jwt-token-key-change-me";
 
 export async function GET() {
   try {
@@ -26,6 +26,8 @@ export async function GET() {
         },
       });
     } catch (err) {
+      // Clear the invalid session cookie to break the redirect loop
+      cookieStore.delete("session");
       return NextResponse.json({ error: "Invalid session token" }, { status: 401 });
     }
   } catch (error) {

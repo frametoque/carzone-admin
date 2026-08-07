@@ -3,7 +3,7 @@ import postgres from "postgres";
 // 1. Declare a single client variable that will hold either the DB or the Mock
 let client: any;
 
-const DATABASE_URL = process.env.DATABASE_URL;
+const DATABASE_URL = process.env.DATABASE_URL || process.env.DATABASE_URL_UNPOOLED;
 
 // 2. Try to initialize real Postgres if the URL is provided
 if (DATABASE_URL) {

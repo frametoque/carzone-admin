@@ -7,7 +7,7 @@ import { SkeletonCards, SkeletonTable } from "../components/SkeletonUI";
 import CategoryPicker from "../components/CategoryPicker";
 import DateRangeSelector from "../components/DateRangeSelector";
 
-const DEFAULT_CATEGORIES = ["Stock Purchase", "Shipping", "Utilities", "Marketing", "Other"];
+const DEFAULT_CATEGORIES = ["Vehicle Acquisition", "Repairs & Detailing", "Showroom Rent", "Staff Salary & Commission", "Marketing & Ads", "Utilities", "Other"];
 
 const formatLKR = (amount: number) => {
   return new Intl.NumberFormat('en-LK', {
@@ -51,14 +51,17 @@ export default function ExpensesPage() {
       setData(res);
       setAccounts(accs);
 
-      // Aggregate categories from DB records
-      const uniqueCats = new Set<string>();
-      DEFAULT_CATEGORIES.forEach(c => uniqueCats.add(c));
+      // Aggregate categories from DB records (matching against DEFAULT_CATEGORIES)
+      const uniqueCats = new Set<string>(DEFAULT_CATEGORIES);
       res.items.forEach((item: any) => {
         if (item.category) {
           const normalized = item.category.trim();
           const matched = DEFAULT_CATEGORIES.find(c => c.toLowerCase() === normalized.toLowerCase());
-          uniqueCats.add(matched || (normalized.charAt(0).toUpperCase() + normalized.slice(1)));
+          if (matched) {
+            uniqueCats.add(matched);
+          } else {
+            uniqueCats.add(normalized.charAt(0).toUpperCase() + normalized.slice(1));
+          }
         }
       });
       setAvailableCategories(Array.from(uniqueCats));
@@ -250,11 +253,11 @@ export default function ExpensesPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden">
+      <div className="bg-[#ffffff] border border-[#e2e8f0] rounded-3xl overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-white/10 text-gray-400 text-sm">
+              <tr className="border-b border-[#e2e8f0] text-[#64748b] text-sm">
                 <th className="p-4 font-medium">Date</th>
                 <th className="p-4 font-medium">Amount</th>
                 <th className="p-4 font-medium">Account</th>
@@ -264,37 +267,39 @@ export default function ExpensesPage() {
                 <th className="p-4 font-medium text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-[#f1f5f9] text-[#0f172a]">
               {filteredExpenses.map((row: any) => (
-                <tr key={row.id} className="hover:bg-white/5 transition-colors">
-                  <td className="p-4 text-sm">{row.date}</td>
-                  <td className="p-4 font-semibold text-red-400">{formatLKR(row.amount)}</td>
-                  <td className="p-4 text-sm text-gray-400 font-medium">{row.accountName || '-'}</td>
-                  <td className="p-4 text-sm text-gray-300">{row.desc}</td>
-                  <td className="p-4">
-                    <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-white/10 border border-white/10">
+                <tr key={row.id} className="hover:bg-[#f8fafc] transition-colors">
+                  <td className="p-4 text-sm text-[#64748b] whitespace-nowrap">{row.date}</td>
+                  <td className="p-4 font-semibold text-[#b91c1c] whitespace-nowrap">{formatLKR(row.amount)}</td>
+                  <td className="p-4 text-sm text-[#334155] font-medium">{row.accountName || '-'}</td>
+                  <td className="p-4 text-sm text-[#334155]">{row.desc}</td>
+                  <td className="p-4 whitespace-nowrap">
+                    <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-[#f1f5f9] border border-[#cbd5e1] text-[#475569]">
                       {row.category}
                     </span>
                   </td>
-                  <td className="p-4 text-sm">{row.paidVia}</td>
-                  <td className="p-4 flex items-center justify-end gap-2">
-                    {row.receiptUrl && (
-                      <button onClick={() => setViewingReceipt(row)} className="p-2 hover:bg-white/10 rounded-xl transition-colors text-blue-400 hover:text-blue-300">
-                        <Eye className="w-4 h-4" />
+                  <td className="p-4 text-sm text-[#0f172a] whitespace-nowrap">{row.paidVia}</td>
+                  <td className="p-4">
+                    <div className="flex items-center justify-end gap-1">
+                      {row.receiptUrl && (
+                        <button onClick={() => setViewingReceipt(row)} className="p-2 hover:bg-[#f1f5f9] rounded-xl transition-colors text-[#0284c7] hover:text-[#0369a1]">
+                          <Eye className="w-4 h-4" />
+                        </button>
+                      )}
+                      <button onClick={() => handleEdit(row)} className="p-2 hover:bg-[#f1f5f9] rounded-xl transition-colors text-[#64748b] hover:text-[#0f172a]">
+                        <Edit2 className="w-4 h-4" />
                       </button>
-                    )}
-                    <button onClick={() => handleEdit(row)} className="p-2 hover:bg-white/10 rounded-xl transition-colors text-gray-400 hover:text-white">
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button onClick={() => handleDelete(row.id)} className="p-2 hover:bg-red-400/10 rounded-xl transition-colors text-gray-400 hover:text-red-400">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                      <button onClick={() => handleDelete(row.id)} className="p-2 hover:bg-red-50 rounded-xl transition-colors text-[#64748b] hover:text-red-600">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
               {filteredExpenses.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="p-6 text-center text-gray-500">No expense records found.</td>
+                  <td colSpan={7} className="p-8 text-center text-[#64748b]">No expense records found.</td>
                 </tr>
               )}
             </tbody>

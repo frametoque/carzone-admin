@@ -50,7 +50,7 @@ export default function NewQuotationPage() {
   ]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>(["Spare Parts"]);
 
-  const ALL_CATEGORIES = ["Brake", "Coolant", "Electronic Accessories", "Filters", "Modifications", "Oil", "Suspension", "Spare Parts"];
+  const ALL_CATEGORIES = ["Vehicle Sales", "Broker Commission", "Registration & Transfer Fees", "Inspection & Certification", "Financing & Lease Commission", "Other Services"];
 
   useEffect(() => {
     const loadClients = async () => {

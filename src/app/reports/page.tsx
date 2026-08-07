@@ -29,7 +29,7 @@ const formatLKR = (amount: number) => {
 };
 
 export default function ReportsPage() {
-  const [activeTab, setActiveTab] = useState<"overview" | "pnl" | "trial">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "ledger" | "pnl" | "trial">("overview");
   
   // Date filters state
   const [pnlDateRange, setPnlDateRange] = useState("this year");
@@ -197,8 +197,6 @@ export default function ReportsPage() {
     const asOfDate = new Date(asOfStr);
     asOfDate.setHours(23, 59, 59, 999);
 
-    const startOfYear = new Date(asOfDate.getFullYear(), 0, 1);
-
     const assets: Record<string, number> = {};
     const liabilities: Record<string, number> = {};
 
@@ -216,36 +214,32 @@ export default function ReportsPage() {
       });
 
       if (balance >= 0) {
-        assets[acc.name] = balance;
+        if (balance > 0) assets[acc.name] = balance;
       } else {
         liabilities[acc.name] = Math.abs(balance);
       }
     });
 
-    // 2. Calculate prior years' retained profit
-    let priorIncomes = 0;
-    let priorExpenses = 0;
+    // 2. Fetch all lifetime income and expenses up to asOfStr
+    const pnl = calculatePNLData("2000-01-01", asOfStr);
 
-    (data.journalEntries || []).forEach((entry: any) => {
-      const entryDate = new Date(entry.date);
-      if (entryDate < startOfYear) {
-        if (entry.type === "income") {
-          priorIncomes += entry.amount;
-        } else {
-          priorExpenses += entry.amount;
-        }
-      }
-    });
+    // 3. Calculate balancing figure
+    const totalAssets = Object.values(assets).reduce((a, b) => a + b, 0);
+    const totalExpenses = Object.values(pnl.expenses).reduce((a, b) => a + b, 0);
+    const totalDebits = totalAssets + totalExpenses;
 
-    const priorNetProfit = priorIncomes - priorExpenses;
+    const totalLiabilities = Object.values(liabilities).reduce((a, b) => a + b, 0);
+    const totalIncome = Object.values(pnl.income).reduce((a, b) => a + b, 0);
+    const currentCredits = totalLiabilities + totalIncome;
 
     const equity: Record<string, number> = {};
-    if (priorNetProfit !== 0) {
-      equity["Profit for all prior years"] = priorNetProfit;
+    const imbalance = totalDebits - currentCredits;
+    
+    if (imbalance !== 0) {
+      // If Debits > Credits, we need a Credit balance (Equity) to balance.
+      // If Debits < Credits, we need a Debit balance (Negative Equity).
+      equity["Capital & Historical Balancing"] = imbalance;
     }
-
-    // 3. Current year's income and expenses
-    const pnl = calculatePNLData(startOfYear.toISOString().split("T")[0], asOfStr);
 
     return {
       assets,
@@ -268,8 +262,8 @@ export default function ReportsPage() {
       return false;
     }
     if (sectionTitle === "Equity") {
-      if (name === "Profit for all prior years") {
-        return value < 0; // Negative prior profit (loss) is a Debit
+      if (name === "Capital & Historical Balancing") {
+        return value < 0; // Negative equity balancing is a Debit
       }
       return false;
     }
@@ -529,7 +523,7 @@ export default function ReportsPage() {
   return (
     <div className="space-y-6">
       {/* REPORT TYPE TAB SWITCHER */}
-      <div className="bg-white/5 p-1 rounded-2xl border border-white/10 flex w-fit">
+      <div className="bg-white/5 p-1 rounded-2xl border border-white/10 flex flex-wrap gap-1 w-fit">
         <button
           onClick={() => setActiveTab("overview")}
           className={`px-4 py-2 text-sm font-semibold rounded-xl transition-all duration-200 cursor-pointer ${
@@ -539,6 +533,16 @@ export default function ReportsPage() {
           }`}
         >
           Overview Dashboard
+        </button>
+        <button
+          onClick={() => setActiveTab("ledger")}
+          className={`px-4 py-2 text-sm font-semibold rounded-xl transition-all duration-200 cursor-pointer ${
+            activeTab === "ledger"
+              ? "bg-brand-500 text-white shadow-md shadow-brand-500/20"
+              : "text-gray-400 hover:text-white"
+          }`}
+        >
+          General Ledger
         </button>
         <button
           onClick={() => setActiveTab("pnl")}
@@ -651,12 +655,16 @@ export default function ReportsPage() {
             </div>
           )}
 
-          {/* Journal Entries Table */}
+          
+        </div>
+      )}
+
+      {/* VIEW: GENERAL LEDGER */}
+      {activeTab === "ledger" && (
           <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 space-y-6">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div>
-                <h2 className="text-xl font-semibold text-white">Account Journal Ledger</h2>
-                <p className="text-sm text-gray-400">Chronological transaction ledger of sales revenue and expenditures.</p>
+                <h2 className="text-xl font-semibold text-white">General Ledger</h2>
               </div>
               
               <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
@@ -747,7 +755,6 @@ export default function ReportsPage() {
               </table>
             </div>
           </div>
-        </div>
       )}
 
       {/* VIEW: PROFIT & LOSS */}
@@ -859,6 +866,19 @@ export default function ReportsPage() {
       {/* VIEW: TRIAL BALANCE */}
       {activeTab === "trial" && (
         <div className="space-y-6 animate-in slide-in-from-bottom duration-300">
+          
+          {/* As Of Date Selector */}
+          <div className="flex justify-end mb-2">
+            <div className="flex items-center gap-3">
+              <span className="text-gray-400 text-sm font-medium">As Of Date:</span>
+              <input
+                type="date"
+                value={tbAsOfDate}
+                onChange={(e) => setTbAsOfDate(e.target.value)}
+                className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:border-brand-500 transition-colors outline-none"
+              />
+            </div>
+          </div>
 
           {/* Trial balance table */}
           <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden">

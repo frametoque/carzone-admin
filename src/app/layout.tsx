@@ -20,6 +20,7 @@ import {
   Menu,
   Search,
   LayoutDashboard,
+  Car,
   Wallet,
   Receipt,
   FileText,
@@ -40,8 +41,11 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
-  ArrowLeftRight
+  ArrowLeftRight,
+  RefreshCw,
+  Cake
 } from "lucide-react";
+import { getTodayBirthdays } from "./actions/actions";
 
 // Framer Motion spring config for sidebar width
 const sidebarSpring = {
@@ -78,6 +82,28 @@ const labelVariants: Variants = {
   },
 };
 
+// Page title mapping for browser tabs
+const getDocumentTitle = (path: string): string => {
+  if (path === "/" || path === "/dashboard") return "Dashboard | Carz One";
+  if (path.startsWith("/stock")) return "Stock | Carz One";
+  if (path.startsWith("/accounts")) return "Accounts | Carz One";
+  if (path.startsWith("/ledgers")) return "Ledgers | Carz One";
+  if (path.startsWith("/clients")) return "Clients | Carz One";
+  if (path.startsWith("/invoice/")) {
+    const parts = path.split("/");
+    const id = parts[parts.length - 1];
+    return id ? `Invoice #${id} | Carz One` : "Invoice | Carz One";
+  }
+  if (path.startsWith("/invoices")) return "Invoices | Carz One";
+  if (path.startsWith("/quotations")) return "Quotations | Carz One";
+  if (path.startsWith("/income")) return "Income | Carz One";
+  if (path.startsWith("/expenses")) return "Expenses | Carz One";
+  if (path.startsWith("/reports")) return "Reports | Carz One";
+  if (path.startsWith("/forecasts")) return "Forecasts | Carz One";
+  if (path === "/login") return "Login | Carz One";
+  return "Admin | Carz One";
+};
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -88,17 +114,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [user, setUser] = useState<any>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
+  // Dynamic browser tab title — update on every render (no useEffect needed)
+  if (typeof document !== "undefined") {
+    document.title = getDocumentTitle(pathname);
+  }
+
   useEffect(() => {
-    const saved = localStorage.getItem("sidebar-collapsed") === "true";
+    const saved = localStorage.getItem("sidebar-is-collapsed") === "true";
     setCollapsed(saved);
     setMounted(true);
   }, []);
 
+  // Fetch session ONCE on mount — session doesn't change between page navigations
   useEffect(() => {
-    if (pathname === "/login") {
-      setIsLoaded(true);
-      return;
-    }
     let active = true;
     const fetchSession = async () => {
       try {
@@ -125,15 +153,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         if (active) setIsLoaded(true);
       }
     };
-    fetchSession();
+    if (pathname !== "/login") {
+      fetchSession();
+    } else {
+      setIsLoaded(true);
+    }
     return () => { active = false; };
-  }, [pathname]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (pathname === "/login") {
     return (
       <html lang="en" suppressHydrationWarning>
         <head>
-          <title>Admin | Island Spares</title>
+          <title>Admin | Carz One</title>
           <meta name="robots" content="noindex, nofollow" />
         </head>
         <body className="bg-black text-white antialiased">
@@ -148,7 +180,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const toggleCollapsed = () => {
     setCollapsed((prev) => {
       const next = !prev;
-      localStorage.setItem("sidebar-collapsed", String(next));
+      localStorage.setItem("sidebar-is-collapsed", String(next));
       if (next) {
         setIgnoreHover(true);
       }
@@ -172,7 +204,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <title>Admin | Island Spares</title>
+        <title>Admin | Carz One</title>
         <meta name="robots" content="noindex, nofollow" />
       </head>
       <body className="bg-black text-white antialiased">
@@ -295,6 +327,7 @@ const Header = ({ user, isLoaded, setMobileMenuOpen }: { user: any; isLoaded: bo
 
   const getPageTitle = (path: string): string => {
     if (path === "/" || path === "/dashboard") return "Dashboard";
+    if (path.startsWith("/stock")) return "Stock";
     if (path.startsWith("/accounts")) return "Accounts";
     if (path.startsWith("/ledgers")) return "Ledgers";
     if (path.startsWith("/clients")) return "Clients";
@@ -308,6 +341,7 @@ const Header = ({ user, isLoaded, setMobileMenuOpen }: { user: any; isLoaded: bo
     if (path.startsWith("/income")) return "Income";
     if (path.startsWith("/expenses")) return "Expenses";
     if (path.startsWith("/reports")) return "Reports";
+    if (path.startsWith("/forecasts")) return "Forecasts";
     return "Admin";
   };
 
@@ -344,8 +378,19 @@ const Header = ({ user, isLoaded, setMobileMenuOpen }: { user: any; isLoaded: bo
 
   const [reportsTab, setReportsTab] = useState<string>("overview");
   const [tbAsOfDate, setTbAsOfDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [todayBirthdays, setTodayBirthdays] = useState<any[]>([]);
 
   useEffect(() => {
+    async function loadBirthdays() {
+      try {
+        const res = await getTodayBirthdays();
+        setTodayBirthdays(res);
+      } catch (e) {
+        console.error("Failed to load birthdays", e);
+      }
+    }
+    loadBirthdays();
+
     const handleTabChange = (e: Event) => {
       const customEvt = e as CustomEvent<string>;
       if (customEvt.detail) {
@@ -372,7 +417,19 @@ const Header = ({ user, isLoaded, setMobileMenuOpen }: { user: any; isLoaded: bo
   };
 
   const isReportsTrialTab = pathname.startsWith("/reports") && reportsTab === "trial";
+  const isDashboardOrClientsPage = (pathname === "/" || pathname === "/dashboard" || pathname.startsWith("/clients"));
   const shouldShowDateRange = (pathname === "/dashboard" || pathname === "/" || pathname.startsWith("/income") || pathname.startsWith("/expenses") || pathname.startsWith("/ledgers") || pathname.startsWith("/quotations") || (pathname.startsWith("/reports") && !isReportsTrialTab));
+
+  // Time-based greeting for dashboard
+  const getGreeting = (): string => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good Morning";
+    if (hour < 17) return "Good Afternoon";
+    return "Good Evening";
+  };
+
+  const isDashboard = pathname === "/" || pathname === "/dashboard";
+  const userName = user?.firstName || "Admin";
 
   return (
     <header className="sticky top-0 z-30 bg-black/80 backdrop-blur-xl border-b border-white/10 h-20 flex-shrink-0 flex items-center">
@@ -387,10 +444,17 @@ const Header = ({ user, isLoaded, setMobileMenuOpen }: { user: any; isLoaded: bo
             <Menu className="w-6 h-6" />
           </button>
 
-          {/* Page Title */}
-          <h1 className="text-2xl font-bold text-white tracking-tight">
-            {getPageTitle(pathname)}
-          </h1>
+          {/* Page Title + Dashboard Greeting */}
+          <div className="flex flex-col">
+            <h1 className="text-2xl font-bold text-white tracking-tight">
+              {getPageTitle(pathname)}
+            </h1>
+            {isDashboard && (
+              <p className="text-xs text-gray-400 font-medium -mt-0.5">
+                {getGreeting()}, {userName}
+              </p>
+            )}
+          </div>
 
           {/* Conditional Date Range Selector for pages that utilize dates */}
           {shouldShowDateRange && (
@@ -408,23 +472,50 @@ const Header = ({ user, isLoaded, setMobileMenuOpen }: { user: any; isLoaded: bo
             </>
           )}
 
-          {/* Trial Balance As Of Date Selector in Top Bar */}
-          {isReportsTrialTab && (
+          {/* Today Birthdays Button in Top Bar */}
+          {isDashboardOrClientsPage && todayBirthdays.length > 0 && (
             <>
               <span className="hidden sm:block w-[1px] h-6 bg-white/20" />
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-400 uppercase font-semibold">As of:</span>
-                <input
-                  type="date"
-                  value={tbAsOfDate}
-                  onChange={(e) => handleTbAsOfDateChange(e.target.value)}
-                  className="bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 outline-none focus:border-brand-500 transition-colors text-sm text-white"
-                />
-              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (todayBirthdays.length === 1) {
+                    const client = todayBirthdays[0];
+                    const rawMsg = "\u{1F389} Happy Birthday, " + client.name + "! \u{1F382}\u{1F697}\n\nThe entire *Carz One Motor Trading* team wishes you a fantastic birthday filled with happiness, success, and unforgettable moments! \u{1F973}\u{2728}\n\nMay your journey ahead be filled with new opportunities, exciting adventures, and many miles of success. \u{1F6E3}\u{FE0F}\u{1F3C6}\n\n*Keep moving forward. Keep chasing your dreams!* \u{1F698}\u{1F4A8}\n\n*Carz One Motor Trading*";
+                    const msg = encodeURIComponent(rawMsg);
+                    const phone = client.phone ? client.phone.replace(/[^0-9]/g, '') : '';
+                    window.open(phone ? `https://api.whatsapp.com/send?phone=${phone}&text=${msg}` : `https://api.whatsapp.com/send?text=${msg}`, '_blank');
+                  } else {
+                    window.location.href = '/clients';
+                  }
+                }}
+                className="flex items-center gap-2 px-3.5 py-1.5 bg-[#b45309] hover:bg-[#92400e] text-[#ffffff] rounded-full font-bold transition-all cursor-pointer text-xs whitespace-nowrap shadow-sm animate-pulse border border-amber-500/40"
+                title={`${todayBirthdays.length} Client Birthday(s) Today! Click to send WhatsApp wish`}
+              >
+                <Cake className="w-4 h-4 text-[#ffffff]" />
+                <span className="text-[#ffffff] font-extrabold">Birthdays</span>
+                <span className="px-1.5 py-0.5 bg-[#ffffff] text-[#b45309] text-[10px] font-black rounded-full">
+                  {todayBirthdays.length}
+                </span>
+              </button>
             </>
           )}
 
           {/* Page Specific Action Buttons on Top Bar */}
+          {pathname.startsWith("/stock") && (
+            <>
+              <span className="hidden sm:block w-[1px] h-5 bg-white/15" />
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent("stock:open-new"))}
+                className="flex items-center gap-1.5 px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-3xl font-semibold transition-colors cursor-pointer text-xs whitespace-nowrap"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Vehicle</span>
+              </button>
+            </>
+          )}
+
           {pathname.startsWith("/accounts") && (
             <>
               <span className="hidden sm:block w-[1px] h-5 bg-white/15" />
@@ -546,6 +637,20 @@ const Header = ({ user, isLoaded, setMobileMenuOpen }: { user: any; isLoaded: bo
               </button>
             </>
           )}
+
+          {pathname.startsWith("/forecasts") && (
+            <>
+              <span className="hidden sm:block w-[1px] h-5 bg-white/15" />
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent("forecasts:refresh"))}
+                className="flex items-center gap-1.5 px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-3xl font-semibold transition-colors cursor-pointer text-xs whitespace-nowrap"
+              >
+                <RefreshCw className="w-4 h-4" />
+                <span>Refresh Insights</span>
+              </button>
+            </>
+          )}
         </div>
 
         {/* Right Side: System Stats */}
@@ -602,6 +707,7 @@ const Sidebar = ({
 
   const links: { name: string; href: string; icon: any; divider?: boolean; newtab?: boolean }[] = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+    { name: "Stock", href: "/stock", icon: Car },
     { name: "Accounts", href: "/accounts", icon: Landmark },
     { name: "Ledgers", href: "/ledgers", icon: BookOpen },
     { name: "Income", href: "/income", icon: Wallet },
@@ -609,7 +715,8 @@ const Sidebar = ({
     { name: "Invoices", href: "/invoices", icon: FileText, divider: true },
     { name: "Quotations", href: "/quotations", icon: NotepadTextDashed },
     { name: "Clients", href: "/clients", icon: Users },
-    { name: "Reports", href: "/reports", icon: BarChart3, divider: true },
+    { name: "Reports", href: "/reports", icon: BarChart3,  divider: true  },
+    { name: "Forecasts", href: "/forecasts", icon: ChartLine},
   ];
 
   const isActive = (href: string) => {
@@ -677,10 +784,11 @@ const Sidebar = ({
                   <Link href="/" className="lg:block">
                     <Image
                       src="/logo-trans.png"
-                      alt="IslandSpares"
-                      width={120}
-                      height={24}
-                      className="h-[24px] w-auto flex-shrink-0 animate-fade-in object-contain"
+                      alt="Carz One"
+                      width={160}
+                      height={36}
+                      style={{ width: 'auto', height: '36px' }}
+                      className="flex-shrink-0 animate-fade-in object-contain"
                     />
                   </Link>
                 </div>
@@ -700,10 +808,11 @@ const Sidebar = ({
                 <div className="group-hover:opacity-0 transition-opacity duration-150 flex items-center justify-center">
                   <Image
                     src="/logo-trans.png"
-                    alt="Logo"
-                    width={32}
-                    height={32}
-                    className="w-8 h-8 flex-shrink-0 object-contain"
+                    alt="Carz One"
+                    width={40}
+                    height={40}
+                    style={{ width: 'auto', height: '40px' }}
+                    className="flex-shrink-0 object-contain"
                   />
                 </div>
                 {/* Hover collapsed: lock toggle button */}
@@ -768,8 +877,8 @@ const Sidebar = ({
             })}
           </nav>
 
-          {/* User section */}
-          <div className="p-3 border-t border-white/10">
+          {/* User section & Branding Footer */}
+          <div className="p-3 border-t border-white/10 space-y-3">
             <button
               onClick={handleLogout}
               className={`flex items-center transition-all duration-150 hover:bg-red-500/10 cursor-pointer text-gray-300 hover:text-red-400 overflow-hidden rounded-full h-10.5
@@ -789,6 +898,43 @@ const Sidebar = ({
               )}
               <span className="lg:hidden text-sm font-medium pl-1 pr-3">Logout</span>
             </button>
+
+            {desktopExpanded && (
+              <div className="hidden lg:block text-[11px] text-gray-400 px-2 pt-1 border-t border-white/5 space-y-1">
+                <p className="leading-tight">
+                  Developed by{" "}
+                  <a
+                    href="https://frametoque.online"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-brand-400 hover:underline font-semibold"
+                  >
+                    Frametoque Digital Media
+                  </a>
+                </p>
+                <p className="text-[10px] text-gray-500 flex items-center justify-between">
+                  <span>© {new Date().getFullYear()} All rights reserved.</span>
+                  <span className="font-mono text-[9.5px] bg-white/10 px-1.5 py-0.5 rounded text-gray-300">v1.2.4</span>
+                </p>
+              </div>
+            )}
+            <div className="lg:hidden text-[11px] text-gray-400 px-2 pt-1 border-t border-white/5 space-y-1">
+              <p className="leading-tight">
+                Developed by{" "}
+                <a
+                  href="https://frametoque.online"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-brand-400 hover:underline font-semibold"
+                >
+                  Frametoque Digital Media
+                </a>
+              </p>
+              <p className="text-[10px] text-gray-500 flex items-center justify-between">
+                <span>© {new Date().getFullYear()} All rights reserved.</span>
+                <span className="font-mono text-[9.5px] bg-white/10 px-1.5 py-0.5 rounded text-gray-300">v1.2.4</span>
+              </p>
+            </div>
           </div>
         </div>
       </motion.aside>

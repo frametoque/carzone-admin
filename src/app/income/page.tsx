@@ -8,7 +8,7 @@ import { SkeletonCards, SkeletonTable } from "../components/SkeletonUI";
 import CategoryPicker from "../components/CategoryPicker";
 import DateRangeSelector from "../components/DateRangeSelector";
 
-const ALL_CATEGORIES = ["Brake", "Coolant", "Electronic Accessories", "Filters", "Modifications", "Oil", "Suspension", "Spare Parts", "Other"];
+const ALL_CATEGORIES = ["Vehicle Sales", "Broker Commission", "Registration & Transfer Fees", "Inspection & Certification", "Financing & Lease Commission", "Other Services"];
 
 const formatLKR = (amount: number) =>
   new Intl.NumberFormat('en-LK', { style: 'currency', currency: 'LKR' }).format(amount || 0);
@@ -366,11 +366,11 @@ export default function IncomePage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden">
+      <div className="bg-[#ffffff] border border-[#e2e8f0] rounded-3xl overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-white/10 text-gray-400 text-sm">
+              <tr className="border-b border-[#e2e8f0] text-[#64748b] text-sm">
                 <th className="p-4 font-medium">Date</th>
                 <th className="p-4 font-medium">Amount</th>
                 <th className="p-4 font-medium">Account</th>
@@ -381,49 +381,49 @@ export default function IncomePage() {
                 <th className="p-4 font-medium text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-[#f1f5f9] text-[#0f172a]">
               {filteredIncome.map((row: any) => (
-                <tr key={row.id} className="hover:bg-white/5 transition-colors">
-                  <td className="p-4 text-sm">{row.date}</td>
-                  <td className="p-4 font-semibold text-green-400">{formatLKR(row.amount)}</td>
-                  <td className="p-4 text-sm text-gray-400 font-medium">{row.accountName || '-'}</td>
-                  <td className="p-4 text-sm">{row.client || '-'}</td>
-                  <td className="p-4 text-sm text-gray-300">{row.desc}</td>
+                <tr key={row.id} className="hover:bg-[#f8fafc] transition-colors">
+                  <td className="p-4 text-sm text-[#64748b] whitespace-nowrap">{row.date}</td>
+                  <td className="p-4 font-semibold text-[#15803d] whitespace-nowrap">{formatLKR(row.amount)}</td>
+                  <td className="p-4 text-sm text-[#334155] font-medium">{row.accountName || '-'}</td>
+                  <td className="p-4 text-sm text-[#0f172a] font-medium">{row.client || '-'}</td>
+                  <td className="p-4 text-sm text-[#334155]">{row.desc}</td>
                   <td className="p-4">
                     <div className="flex flex-wrap gap-1">
                       {parseCategories(row.category).map((cat) => (
-                        <span key={cat} className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-white/10 border border-white/10 whitespace-nowrap">
+                        <span key={cat} className="px-2.5 py-1 text-xs font-medium rounded-full bg-[#f1f5f9] border border-[#cbd5e1] text-[#475569] whitespace-nowrap">
                           {cat}
                         </span>
                       ))}
                     </div>
                   </td>
-                  <td className="p-4">
+                  <td className="p-4 whitespace-nowrap">
                     {row.invoice ? (
-                      <Link href={`/invoice/${row.invoice}`} className="flex items-center gap-1 text-sm text-brand-400 hover:text-brand-300 transition-colors">
-                        <FileText className="w-4 h-4" />{row.invoice}
+                      <Link href={`/invoice/${row.invoice}`} className="flex items-center gap-1.5 text-sm font-semibold text-[#b91c1c] hover:text-[#991b1b] transition-colors">
+                        <FileText className="w-4 h-4 text-[#b91c1c]" />{row.invoice}
                       </Link>
                     ) : '-'}
                   </td>
                   <td className="p-4">
-                    <div className="flex items-center justify-end gap-2">
+                    <div className="flex items-center justify-end gap-1">
                       {/* Create Invoice button */}
                       <button
                         onClick={() => openInvoiceModal(row)}
                         title="Create Invoice"
-                        className="p-2 hover:bg-brand-400/10 rounded-xl transition-colors text-gray-400 hover:text-brand-400"
+                        className="p-2 hover:bg-[#f1f5f9] rounded-xl transition-colors text-[#64748b] hover:text-[#002f4c]"
                       >
                         <FilePlus className="w-4 h-4" />
                       </button>
                       {row.receiptUrl && (
-                        <button onClick={() => setViewingReceipt(row)} className="p-2 hover:bg-white/10 rounded-xl transition-colors text-blue-400 hover:text-blue-300">
+                        <button onClick={() => setViewingReceipt(row)} className="p-2 hover:bg-[#f1f5f9] rounded-xl transition-colors text-[#0284c7] hover:text-[#0369a1]">
                           <Eye className="w-4 h-4" />
                         </button>
                       )}
-                      <button onClick={() => handleEdit(row)} className="p-2 hover:bg-white/10 rounded-xl transition-colors text-gray-400 hover:text-white">
+                      <button onClick={() => handleEdit(row)} className="p-2 hover:bg-[#f1f5f9] rounded-xl transition-colors text-[#64748b] hover:text-[#0f172a]">
                         <Edit2 className="w-4 h-4" />
                       </button>
-                      <button onClick={() => handleDelete(row.id)} className="p-2 hover:bg-red-400/10 rounded-xl transition-colors text-gray-400 hover:text-red-400">
+                      <button onClick={() => handleDelete(row.id)} className="p-2 hover:bg-red-50 rounded-xl transition-colors text-[#64748b] hover:text-red-600">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
@@ -431,7 +431,7 @@ export default function IncomePage() {
                 </tr>
               ))}
               {filteredIncome.length === 0 && (
-                <tr><td colSpan={8} className="p-6 text-center text-gray-500">No income records found.</td></tr>
+                <tr><td colSpan={8} className="p-8 text-center text-[#64748b]">No income records found.</td></tr>
               )}
             </tbody>
           </table>
