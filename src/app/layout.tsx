@@ -43,7 +43,8 @@ import {
   Plus,
   ArrowLeftRight,
   RefreshCw,
-  Cake
+  Cake,
+  Settings
 } from "lucide-react";
 import { getTodayBirthdays } from "./actions/actions";
 
@@ -100,6 +101,7 @@ const getDocumentTitle = (path: string): string => {
   if (path.startsWith("/expenses")) return "Expenses | Carz One";
   if (path.startsWith("/reports")) return "Reports | Carz One";
   if (path.startsWith("/forecasts")) return "Forecasts | Carz One";
+  if (path.startsWith("/settings")) return "Settings | Carz One";
   if (path === "/login") return "Login | Carz One";
   return "Admin | Carz One";
 };
@@ -342,6 +344,7 @@ const Header = ({ user, isLoaded, setMobileMenuOpen }: { user: any; isLoaded: bo
     if (path.startsWith("/expenses")) return "Expenses";
     if (path.startsWith("/reports")) return "Reports";
     if (path.startsWith("/forecasts")) return "Forecasts";
+    if (path.startsWith("/settings")) return "Settings";
     return "Admin";
   };
 
@@ -878,7 +881,34 @@ const Sidebar = ({
           </nav>
 
           {/* User section & Branding Footer */}
-          <div className="p-3 border-t border-white/10 space-y-3">
+          <div className="p-3 border-t border-white/10 space-y-1">
+            {/* Settings Link */}
+            <Link
+              href="/settings"
+              onClick={() => setMobileMenuOpen(false)}
+              className={`flex items-center transition-all duration-150 overflow-hidden rounded-full h-10.5
+                ${desktopExpanded
+                  ? "w-full justify-start px-0.5"
+                  : "w-10.5 justify-center p-0 mx-auto"
+                }
+                ${pathname.startsWith("/settings")
+                  ? "active-nav-link bg-white text-black font-semibold shadow-md shadow-black/20"
+                  : "text-gray-300 hover:bg-white/5"
+                }`}
+            >
+              <span className="w-10.5 h-10.5 flex-shrink-0 flex items-center justify-center">
+                <Settings className="w-5.5 h-5.5" />
+              </span>
+
+              {desktopExpanded && (
+                <span className="hidden lg:block overflow-hidden whitespace-nowrap text-sm font-medium pl-1 pr-3">
+                  Settings
+                </span>
+              )}
+              <span className="lg:hidden text-sm font-medium pl-1 pr-3">Settings</span>
+            </Link>
+
+            {/* Logout Button */}
             <button
               onClick={handleLogout}
               className={`flex items-center transition-all duration-150 hover:bg-red-500/10 cursor-pointer text-gray-300 hover:text-red-400 overflow-hidden rounded-full h-10.5

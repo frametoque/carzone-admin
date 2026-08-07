@@ -3,6 +3,47 @@
 import sql from "@/lib/db";
 import { promises as fs } from 'fs';
 import path from 'path';
+import { cookies, headers } from 'next/headers';
+import jwt from 'jsonwebtoken';
+
+const JWT_SECRET = process.env.JWT_SECRET || "super-secret-carzone-jwt-token-key-change-me";
+
+// --- Activity Logger ---
+// Call this from any mutation action to log the activity.
+// It auto-reads the user email from the session cookie and IP from headers.
+export async function logActivity(action: string, extraInfo?: { os?: string; client?: string }) {
+  try {
+    // Get user email from session
+    let userEmail = "System";
+    try {
+      const cookieStore = await cookies();
+      const sessionCookie = cookieStore.get("session");
+      if (sessionCookie?.value) {
+        const decoded: any = jwt.verify(sessionCookie.value, JWT_SECRET);
+        userEmail = decoded.email || "System";
+      }
+    } catch {}
+
+    // Get IP from request headers
+    let ip = "Unknown";
+    try {
+      const hdrs = await headers();
+      const forwarded = hdrs.get("x-forwarded-for");
+      ip = forwarded ? forwarded.split(",")[0].trim() : hdrs.get("x-real-ip") || "Unknown";
+    } catch {}
+
+    await sql`
+      INSERT INTO system_activity_logs (user_email, ip_address, action, os, client)
+      VALUES (${userEmail}, ${ip}, ${action}, ${extraInfo?.os || null}, ${extraInfo?.client || null})
+    `;
+
+    // Periodically clean up logs older than 3 months (lightweight — runs inline)
+    await sql`DELETE FROM system_activity_logs WHERE timestamp < NOW() - INTERVAL '3 months'`;
+  } catch (err) {
+    // Silently fail — logging should never block the main action
+    console.error("Activity log failed:", err);
+  }
+}
 
 export async function uploadReceipt(formData: FormData, type: 'income' | 'expenses'): Promise<string> {
   const file = formData.get('file') as File;
@@ -257,6 +298,7 @@ export async function createIncome(data: any) {
   if (newId && data.accountId) {
     await syncLedgerEntry('income', newId, data.date, data.amount, data.description, data.accountId);
   }
+  await logActivity(`Created income: Recorded $${data.amount} for "${data.description || ''}"`);
 }
 
 export async function createClient(data: { name: string; email?: string | null; company?: string | null; phone?: string | null; address?: string | null; birthday?: string | null }): Promise<string> {
@@ -265,6 +307,7 @@ export async function createClient(data: { name: string; email?: string | null; 
     INSERT INTO admin_clients (id, full_name, email, company, phone, address, birthday, active)
     VALUES (${clientId}, ${data.name}, ${data.email || null}, ${data.company || null}, ${data.phone || null}, ${data.address || null}, ${data.birthday || null}, true)
   `;
+  await logActivity(`Created client: "${data.name} " (${data.email || 'no email'})`);
   return clientId;
 }
 
@@ -293,10 +336,12 @@ export async function updateClient(clientId: string, data: { name?: string; emai
   if (emailChanged) {
     await sql`UPDATE invoices  SET user_email = ${newEmail} WHERE LOWER(user_email) = LOWER(${oldEmail})`;
   }
+  await logActivity(`Updated client: "${data.name || clientId}"`);
 }
 
 export async function deleteClient(clientId: string) {
   await sql`DELETE FROM admin_clients WHERE id = ${clientId}`;
+  await logActivity(`Deleted client: ${clientId}`);
 }
 
 export async function updateIncome(id: number, data: any) {
@@ -306,6 +351,7 @@ export async function updateIncome(id: number, data: any) {
     WHERE id = ${id}
   `;
   await syncLedgerEntry('income', id, data.date, data.amount, data.description, data.accountId || null);
+  await logActivity(`Updated income ${id}: recorded $${data.amount} for "${data.description || ''}"`);
 }
 
 export async function deleteIncome(id: number) {
@@ -317,6 +363,7 @@ export async function deleteIncome(id: number) {
   if (oldAccountId) {
     await syncLedgerEntry('income', id, new Date(), 0, '', null);
   }
+  await logActivity(`Deleted income record ${id}`);
 }
 
 // -- EXPENSES --
@@ -357,6 +404,7 @@ export async function createExpense(data: any) {
   if (newId && data.accountId) {
     await syncLedgerEntry('expense', newId, data.date, data.amount, data.description, data.accountId);
   }
+  await logActivity(`Created expense: Recorded $${data.amount} for "${data.description || ''}"`);
 }
 
 export async function updateExpense(id: number, data: any) {
@@ -366,6 +414,7 @@ export async function updateExpense(id: number, data: any) {
     WHERE id = ${id}
   `;
   await syncLedgerEntry('expense', id, data.date, data.amount, data.description, data.accountId || null);
+  await logActivity(`Updated expense ${id}: recorded $${data.amount} for "${data.description || ''}"`);
 }
 
 export async function deleteExpense(id: number) {
@@ -377,6 +426,7 @@ export async function deleteExpense(id: number) {
   if (oldAccountId) {
     await syncLedgerEntry('expense', id, new Date(), 0, '', null);
   }
+  await logActivity(`Deleted expense record ${id}`);
 }
 
 // -- INVOICES --
@@ -429,6 +479,7 @@ export async function deleteInvoice(id: string) {
     WHERE linked_invoice_id = ${id}
   `;
   await sql`DELETE FROM invoices WHERE invoice_id = ${id}`;
+  await logActivity(`Deleted invoice: ${id}`);
 }
 
 export async function recordInvoicePayment(invoiceId: string, paidAmount: number, accountId: number, paymentDateString?: string) {
@@ -489,6 +540,7 @@ export async function recordInvoicePayment(invoiceId: string, paidAmount: number
       await syncLedgerEntry('income', newId, paymentDate, paidAmount, `Payment for Invoice #${invoiceId}`, accountId);
     }
 
+    await logActivity(`Recorded payment of $${paidAmount} via Bank Transfer for invoice ${invoiceId}`);
     return { success: true };
   } catch (error: any) {
     console.error("Failed to record invoice payment:", error);
@@ -812,6 +864,7 @@ export async function createInvoice(invoiceData: any, lineItems: any[]) {
     }
   }
 
+  await logActivity(`Created invoice: "${category || 'Invoice'}" (${invoiceId}) for $${total}`);
   return { success: true, invoiceId };
 }
 
@@ -884,6 +937,7 @@ export async function updateInvoice(invoiceId: string, invoiceData: any, lineIte
     }
   }
 
+  await logActivity(`Updated invoice: (${invoiceId}) for $${total}`);
   return { success: true };
 }
 
@@ -1049,6 +1103,7 @@ export async function createQuotation(data: any, lineItems: any[] = []) {
       `;
     }
   }
+  await logActivity(`Created quotation #${quotationId} for $${data.amount}`);
 }
 
 // ─── REPLACE updateQuotation in actions.ts ───────────────────────────────────
@@ -1109,6 +1164,7 @@ export async function deleteQuotation(id: number) {
   }
 
   await sql`DELETE FROM admin_quotations WHERE id = ${id}`;
+  await logActivity(`Deleted quotation #${id}`);
 }
  
 export async function confirmQuotation(quotationId: number, quotationData: any) {
@@ -1385,6 +1441,7 @@ export async function createAccount(data: any) {
     `;
     await recalculateLedger(newId);
   }
+  await logActivity(`Created account: "${data.name}"`);
   return newId;
 }
 
@@ -1436,6 +1493,7 @@ export async function updateAccount(id: number, data: any) {
 
 export async function deleteAccount(id: number) {
   await sql`DELETE FROM accounts WHERE id = ${id}`;
+  await logActivity(`Deleted account ${id}`);
 }
 
 export async function getAccountLedger(accountId: number, range = 'lifetime') {
@@ -1674,6 +1732,7 @@ export async function createVehicleStock(data: any) {
       ${data.imageUrl || null}
     )
   `;
+  await logActivity(`Added vehicle to stock: ${data.year} ${data.make} ${data.model}`);
 }
 
 export async function updateVehicleStock(id: number, data: any) {
@@ -1701,4 +1760,5 @@ export async function updateVehicleStock(id: number, data: any) {
 
 export async function deleteVehicleStock(id: number) {
   await sql`DELETE FROM vehicle_stock WHERE id = ${id}`;
+  await logActivity(`Deleted vehicle stock record ${id}`);
 }
