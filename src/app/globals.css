@@ -1,0 +1,323 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+}
+
+@theme {
+  --color-black: #f8fafc; /* Slate 50 as background */
+  --color-white: #0f172a; /* Slate 900 as text */
+
+  /* High contrast status colors for light mode readability */
+  --color-green-400: #15803d; /* Green 700 */
+  --color-red-400: #b91c1c; /* Red 700 */
+  --color-amber-400: #b45309; /* Amber 700 */
+  --color-indigo-400: #4f46e5; /* Indigo 600 */
+
+  /* Standard dark slates for light mode text contrast */
+  --color-gray-300: #64748b; /* slate-500 */
+  --color-gray-400: #475569; /* slate-600 */
+  --color-gray-500: #334155; /* slate-700 */
+
+  --color-brand-50: #fcf3f4;
+  --color-brand-100: #f9dbe0;
+  --color-brand-200: #f4b8c1;
+  --color-brand-300: #e98292;
+  --color-brand-400: #c11e2f; /* Vibrant Red from logo */
+  --color-brand-500: #002f4c; /* Deep Blue from logo */
+  --color-brand-600: #0a3350; /* Deep Blue darker */
+  --color-brand-700: #082a42;
+  --color-brand-800: #062033;
+  --color-brand-900: #041624;
+  --color-brand-950: #020b12;
+}
+
+
+* {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+input,
+textarea,
+[contenteditable] {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}
+
+body {
+  font-family: var(--font-geist-sans), sans-serif;
+}
+
+code,
+pre,
+kbd,
+samp {
+  font-family: var(--font-geist-mono), monospace;
+}
+
+@layer utilities {
+  .animate-in {
+    animation-fill-mode: both;
+  }
+
+  .slide-in-from-top {
+    animation-name: slideInFromTop;
+  }
+
+  .slide-in-from-bottom {
+    animation-name: slideInFromBottom;
+  }
+
+  .duration-200 {
+    animation-duration: 200ms;
+  }
+
+  .duration-300 {
+    animation-duration: 300ms;
+  }
+
+  .duration-700 {
+    animation-duration: 700ms;
+  }
+
+  .delay-100 {
+    animation-delay: 100ms;
+  }
+
+  .delay-200 {
+    animation-delay: 200ms;
+  }
+
+  .delay-300 {
+    animation-delay: 300ms;
+  }
+}
+
+@keyframes slideInFromBottom {
+  from {
+    opacity: 0;
+    trasnform: translateY(1rem);
+  }
+
+  to {
+    opacity: 1;
+    trasnform: translateY(0);
+  }
+}
+
+@keyframes slideInFromTop {
+  from {
+    opacity: 0;
+    trasnform: translateY(-1rem);
+  }
+
+  to {
+    opacity: 1;
+    trasnform: translateY(0);
+  }
+}
+
+
+
+html {
+  scroll-behavior: smooth;
+}
+
+.scrollbar-custom::-webkit-scrollbar {
+  width: 8px;
+}
+
+.scrollbar-custom::-webkit-scrollbar-track {
+  background: rgba(12, 25, 55, 0.1);
+}
+
+.scrollbar-custom::-webkit-scrollbar-thumb {
+  background: rgba(59, 130, 246, 0.3);
+  border-radius: 4px;
+}
+
+.scrollbar-custom::-webkit-scrollbar-thumb:hover {
+  background: rgba(59, 130, 246, 0.5);
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.prose {
+  color: inherit;
+}
+
+.prose p {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.prose strong {
+  color: #2563EB;
+  font-weight: 600;
+}
+
+.prose code {
+  background: rgba(59, 130, 246, 0.1);
+  color: #2563EB;
+  padding: 0.2em 0.4em;
+  border-radius: 0.25rem;
+  font-size: 0.875em;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+html {
+  scroll-padding-top: 15rem;
+}
+
+[id] {
+  scroll-margin-top: 5rem;
+}
+
+@keyframes hero-zoom {
+  0% {
+    transform: scale(1.06);
+    opacity: 0;
+  }
+
+  30% {
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@utility animate-hero-zoom {
+  animation: hero-zoom 2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Light Mode Premium Styling Overrides */
+aside {
+  background-color: #ffffff !important;
+  border-right: 1px solid rgba(15, 23, 42, 0.08) !important;
+}
+
+aside .border-b, aside .border-t {
+  border-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+aside nav a {
+  color: #475569 !important; /* Clear Slate-600 text */
+}
+
+aside nav a:hover {
+  background-color: rgba(0, 47, 76, 0.08) !important; /* Logo Deep Blue tint */
+  color: #002f4c !important;
+}
+
+/* Active sidebar link (solid premium dark blue with shadow) */
+aside nav a.active-nav-link {
+  background-color: #002f4c !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 47, 76, 0.15) !important;
+}
+
+/* Category filter chips active state (adjusted light mode: premium soft tint) */
+button.bg-brand-500,
+button[class*="bg-brand-500"],
+div.bg-brand-500,
+.bg-brand-500.text-white {
+  background-color: rgba(0, 47, 76, 0.08) !important; /* Soft logo blue tint */
+  color: #002f4c !important; /* Deep Logo Blue */
+  border: 1px solid rgba(0, 47, 76, 0.18) !important;
+  box-shadow: none !important;
+}
+
+/* Primary Action Buttons & Links (Solid Logo Deep Blue with true white text) */
+button.bg-brand-600,
+a.bg-brand-600,
+button.bg-brand-700,
+a.bg-brand-700,
+.bg-brand-600,
+.bg-brand-700 {
+  background-color: #002f4c !important;
+  color: #ffffff !important;
+  border: none !important;
+}
+button.bg-brand-600:hover,
+a.bg-brand-600:hover {
+  background-color: #0a3350 !important;
+}
+
+/* Inactive button chips: soft grey border & visible text */
+.bg-white\/5.border-white\/10 {
+  background-color: #ffffff !important;
+  border-color: rgba(15, 23, 42, 0.12) !important;
+  color: #475569 !important; /* Visible Slate-600 text! */
+}
+.bg-white\/5.border-white\/10:hover {
+  background-color: rgba(15, 23, 42, 0.03) !important;
+}
+
+/* Logout menu item */
+aside button, aside Link {
+  color: #475569 !important;
+}
+
+/* Card layout adjustments (frosted glass -> premium solid white cards with shadows) */
+.bg-white\/5 {
+  background-color: #ffffff !important;
+  border-color: rgba(15, 23, 42, 0.08) !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 2px 4px -2px rgba(0, 0, 0, 0.03) !important;
+}
+
+/* Keep border colors clean */
+.border-white\/10 {
+  border-color: rgba(15, 23, 42, 0.08) !important;
+}
+.border-white\/20 {
+  border-color: rgba(15, 23, 42, 0.15) !important;
+}
+
+/* Hover highlights for lists and tables */
+.hover\:bg-white\/5:hover {
+  background-color: rgba(15, 23, 42, 0.02) !important;
+}
+.hover\:bg-white\/10:hover {
+  background-color: rgba(15, 23, 42, 0.04) !important;
+}
+.hover\:bg-white\/20:hover {
+  background-color: rgba(15, 23, 42, 0.06) !important;
+}
+
+/* Header container */
+header {
+  background-color: rgba(255, 255, 255, 0.85) !important;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08) !important;
+}
+
+/* Dropdown menus, selects, inputs styling */
+input, select, textarea {
+  background-color: #ffffff !important;
+  border: 1px solid rgba(15, 23, 42, 0.15) !important;
+  color: #0f172a !important;
+}
+input::placeholder, textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Select options text */
+option {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
