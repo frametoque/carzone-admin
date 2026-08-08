@@ -1023,9 +1023,9 @@ const Sidebar = ({
             </button>
 
             {desktopExpanded && (
-              <div className="hidden lg:block text-[11px] text-gray-400 px-2 pt-1 border-t border-white/5 space-y-1">
-                <p className="leading-tight">
-                  Developed by{" "}
+              <div className="hidden lg:block text-[11px] text-gray-400 px-2 pt-3 border-t border-white/5 space-y-1">
+                <p className="leading-tight text-center">
+                  Developed By <br />
                   <a
                     href="https://frametoque.online"
                     target="_blank"
@@ -1035,15 +1035,14 @@ const Sidebar = ({
                     Frametoque Digital Media
                   </a>
                 </p>
-                <p className="text-[10px] text-gray-500 flex items-center justify-between">
-                  <span>© {new Date().getFullYear()} All rights reserved.</span>
-                  <span className="font-mono text-[9.5px] bg-white/10 px-1.5 py-0.5 rounded text-gray-300">v1.2.4</span>
+                <p className="text-[8.5px] text-gray-500 text-center mt-1">
+                  © {new Date().getFullYear()} All rights reserved.
                 </p>
               </div>
             )}
-            <div className="lg:hidden text-[11px] text-gray-400 px-2 pt-1 border-t border-white/5 space-y-1">
-              <p className="leading-tight">
-                Developed by{" "}
+            <div className="lg:hidden text-[11px] text-gray-400 px-2 pt-3 border-t border-white/5 space-y-1">
+              <p className="leading-tight text-center">
+                Developed By <br />
                 <a
                   href="https://frametoque.online"
                   target="_blank"
@@ -1053,9 +1052,8 @@ const Sidebar = ({
                   Frametoque Digital Media
                 </a>
               </p>
-              <p className="text-[10px] text-gray-500 flex items-center justify-between">
-                <span>© {new Date().getFullYear()} All rights reserved.</span>
-                <span className="font-mono text-[9.5px] bg-white/10 px-1.5 py-0.5 rounded text-gray-300">v1.2.4</span>
+              <p className="text-[8.5px] text-gray-500 text-center mt-1">
+                © {new Date().getFullYear()} All rights reserved.
               </p>
             </div>
           </div>
