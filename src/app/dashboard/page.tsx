@@ -6,6 +6,8 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { getDashboardData } from "../actions/actions";
 import DateRangeSelector from "../components/DateRangeSelector";
 import { SkeletonDashboard } from "../components/SkeletonUI";
+import { AnimatedCounter } from "../components/AnimatedCounter";
+import { getCachedData, setCachedData } from "@/lib/cache";
 
 const formatLKR = (amount: number) => {
   return new Intl.NumberFormat('en-LK', {
@@ -87,11 +89,20 @@ export default function DashboardPage() {
   useEffect(() => {
     let isCurrent = true;
     async function load() {
-      setLoading(true);
+      const cacheKey = `dashboard_${startDate}_${endDate}`;
+      const cached = getCachedData(cacheKey);
+      if (cached) {
+        setData(cached);
+        setLoading(false); // Instant load
+      } else {
+        setLoading(true);
+      }
+      
       try {
         const res = await getDashboardData(startDate, endDate);
         if (isCurrent) {
           setData(res);
+          setCachedData(cacheKey, res);
         }
       } catch (e) {
         if (isCurrent) {
@@ -114,10 +125,10 @@ export default function DashboardPage() {
   }
 
   const stats = [
-    { label: "Total Income", value: formatLKR(data.totalIncome), icon: Wallet, color: "text-green-400", bg: "bg-green-400/10" },
-    { label: "Total Expenses", value: formatLKR(data.totalExpenses), icon: Receipt, color: "text-red-400", bg: "bg-red-400/10" },
-    { label: "Net Profit", value: formatLKR(data.netProfit), icon: TrendingUp, color: "text-brand-400", bg: "bg-brand-400/10" },
-    { label: "Unpaid Invoices", value: data.unpaidCount.toString(), icon: AlertCircle, color: "text-amber-400", bg: "bg-amber-400/10" },
+    { label: "Total Income", value: data.totalIncome, currency: true, icon: Wallet, color: "text-green-400", bg: "bg-green-400/10" },
+    { label: "Total Expenses", value: data.totalExpenses, currency: true, icon: Receipt, color: "text-red-400", bg: "bg-red-400/10" },
+    { label: "Net Profit", value: data.netProfit, currency: true, icon: TrendingUp, color: "text-brand-400", bg: "bg-brand-400/10" },
+    { label: "Unpaid Invoices", value: data.unpaidCount, currency: false, icon: AlertCircle, color: "text-amber-400", bg: "bg-amber-400/10" },
   ];
 
   const cleanedChartData = (data.chartData || []).map((row: any) => ({
@@ -137,7 +148,7 @@ export default function DashboardPage() {
             </div>
             <div>
               <p className="text-gray-400 text-sm">{stat.label}</p>
-              <p className="text-2xl font-semibold">{stat.value}</p>
+              <AnimatedCounter value={stat.value} currency={stat.currency} className="text-2xl font-semibold block" />
             </div>
           </div>
         ))}

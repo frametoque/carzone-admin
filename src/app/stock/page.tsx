@@ -38,24 +38,31 @@ export default function StockPage() {
     imageUrl: "",
   });
 
-  const loadStock = async () => {
+  const loadStock = async (isCurrent?: () => boolean) => {
     setLoading(true);
     try {
       const stock = await getVehicleStock();
+      if (isCurrent && !isCurrent()) return;
       setVehicles(stock);
     } catch (err) {
-      console.error("Failed to load vehicle stock:", err);
+      if (!isCurrent || isCurrent()) {
+        console.error("Failed to load vehicle stock:", err);
+      }
     } finally {
-      setLoading(false);
+      if (!isCurrent || isCurrent()) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
-    loadStock();
+    let current = true;
+    loadStock(() => current);
 
     const handleOpenNew = () => handleOpenModal();
     window.addEventListener("stock:open-new", handleOpenNew);
     return () => {
+      current = false;
       window.removeEventListener("stock:open-new", handleOpenNew);
     };
   }, []);

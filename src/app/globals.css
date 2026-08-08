@@ -20,17 +20,44 @@
   --color-gray-400: #475569; /* slate-600 */
   --color-gray-500: #334155; /* slate-700 */
 
-  --color-brand-50: #fcf3f4;
-  --color-brand-100: #f9dbe0;
-  --color-brand-200: #f4b8c1;
-  --color-brand-300: #e98292;
-  --color-brand-400: #c11e2f; /* Vibrant Red from logo */
-  --color-brand-500: #002f4c; /* Deep Blue from logo */
-  --color-brand-600: #0a3350; /* Deep Blue darker */
-  --color-brand-700: #082a42;
-  --color-brand-800: #062033;
-  --color-brand-900: #041624;
-  --color-brand-950: #020b12;
+  /* Carz Blue (Deep Navy from Logo Z) */
+  --color-brand-50: #f0f7fb;
+  --color-brand-100: #dceef6;
+  --color-brand-200: #bde0ee;
+  --color-brand-300: #8ecae1;
+  --color-brand-400: #57aad1;
+  --color-brand-500: #003859; /* Exact Logo Match */
+  --color-brand-600: #002d4a;
+  --color-brand-700: #00243b;
+  --color-brand-800: #001a2c;
+  --color-brand-900: #00111f;
+  --color-brand-950: #000912;
+
+  /* Carz Red (Vibrant Red from Logo Text) */
+  --color-accent-50: #fef2f2;
+  --color-accent-100: #fde4e4;
+  --color-accent-200: #fbcaca;
+  --color-accent-300: #f8a1a1;
+  --color-accent-400: #f26868;
+  --color-accent-500: #c8102e; /* Exact Logo Match */
+  --color-accent-600: #aa0d26;
+  --color-accent-700: #8c091f;
+  --color-accent-800: #71081a;
+  --color-accent-900: #5c0817;
+  --color-accent-950: #33030b;
+
+  /* Apple HIG Radius Mappings */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-2xl: 14px;
+  --radius-3xl: 16px;
+}
+
+/* Apple HIG Min Touch Target */
+button, select, input {
+  min-height: 44px;
 }
 
 
@@ -216,17 +243,20 @@ aside .border-b, aside .border-t {
   border-color: rgba(15, 23, 42, 0.08) !important;
 }
 
-aside nav a {
+aside nav a,
+aside a[href="/logs"] {
   color: #475569 !important; /* Clear Slate-600 text */
 }
 
-aside nav a:hover {
+aside nav a:hover,
+aside a[href="/logs"]:hover {
   background-color: rgba(0, 47, 76, 0.08) !important; /* Logo Deep Blue tint */
   color: #002f4c !important;
 }
 
 /* Active sidebar link (solid premium dark blue with shadow) */
-aside nav a.active-nav-link {
+aside nav a.active-nav-link,
+aside a[href="/logs"].active-nav-link {
   background-color: #002f4c !important;
   color: #ffffff !important;
   box-shadow: 0 4px 6px -1px rgba(0, 47, 76, 0.15) !important;
@@ -270,7 +300,7 @@ a.bg-brand-600:hover {
 }
 
 /* Logout menu item */
-aside button, aside Link {
+aside button {
   color: #475569 !important;
 }
 

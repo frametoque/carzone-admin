@@ -30,21 +30,31 @@ export default function InvoicesPage() {
   const [accounts, setAccounts] = useState<any[]>([]);
   const [isSavingPayment, setIsSavingPayment] = useState(false);
 
-  const loadData = async () => {
+  const loadData = async (isCurrent?: () => boolean) => {
     try {
       const res = await getInvoices();
+      if (isCurrent && !isCurrent()) return;
       setData(res);
       // Fetch accounts to populate recording modal
       const accs = await getAccounts();
+      if (isCurrent && !isCurrent()) return;
       setAccounts(accs);
     } catch (e) {
-      console.error("Failed to load invoices", e);
+      if (!isCurrent || isCurrent()) {
+        console.error("Failed to load invoices", e);
+      }
     } finally {
-      setLoading(false);
+      if (!isCurrent || isCurrent()) {
+        setLoading(false);
+      }
     }
   };
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => { 
+    let current = true;
+    loadData(() => current); 
+    return () => { current = false; };
+  }, []);
 
   const openPaymentModal = (invoice: any) => {
     setSelectedInvoice(invoice);
@@ -179,7 +189,7 @@ export default function InvoicesPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-[#ffffff] border border-[#e2e8f0] rounded-3xl overflow-hidden shadow-xs">
+      <div className="bg-[#ffffff] border border-[#e2e8f0] overflow-hidden shadow-xs" style={{ borderRadius: 16 }}>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -283,13 +293,13 @@ export default function InvoicesPage() {
       </div>
       {/* Payment Recording Modal */}
       {isModalOpen && selectedInvoice && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-black border border-white/10 rounded-3xl p-6 w-full max-w-md shadow-2xl relative space-y-4">
-            <h3 className="text-xl font-bold text-white">Record Payment</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#020b12]/60 backdrop-blur-sm">
+          <div className="bg-white border border-[#e2e8f0] p-6 w-full max-w-md shadow-2xl relative space-y-4" style={{ borderRadius: 16 }}>
+            <h3 className="text-xl font-bold text-gray-900">Record Payment</h3>
             
             <div className="space-y-1">
               <p className="text-xs text-gray-400">Invoice ID</p>
-              <p className="text-brand-400 font-semibold">{selectedInvoice.id}</p>
+              <p className="text-brand-600 font-semibold">{selectedInvoice.id}</p>
             </div>
 
             <div className="space-y-1">

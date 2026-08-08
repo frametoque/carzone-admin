@@ -245,10 +245,11 @@ export async function getForecastsAnalysisData(): Promise<SystemAnalysisData> {
   };
 }
 
-export async function generateAIForecast(data: SystemAnalysisData) {
+export async function generateAIForecast(data: SystemAnalysisData, forecastMonths: number = 3) {
+  const forecastLabel = forecastMonths === 1 ? 'Next Month' : forecastMonths === 3 ? 'Next Quarter (3 Months)' : forecastMonths === 6 ? 'Next 6 Months' : 'Next Year (12 Months)';
   const prompt = `
 You are an expert Automotive Dealership Financial Analyst and AI Business Planner for "Carz One".
-Analyze the real live dealership dataset provided below and generate comprehensive, data-backed business forecasts, inventory acquisition recommendations, marketing strategies, and financial risk predictions.
+Analyze the real live dealership dataset provided below and generate comprehensive, data-backed business forecasts for the period: ${forecastLabel} (${forecastMonths} months ahead). Provide inventory acquisition recommendations, marketing strategies, and financial risk predictions scaled to this ${forecastMonths}-month forecast window.
 
 LIVE DEALERSHIP DATASET:
 - Total Revenue: LKR ${data.metrics.totalRevenue.toLocaleString()}
@@ -261,13 +262,13 @@ LIVE DEALERSHIP DATASET:
 - Total Client Base: ${data.metrics.totalClients} clients
 
 TOP VEHICLE PERFORMANCE & SALES IN SIGHTS:
-${JSON.stringify(data.vehiclePerformance.slice(0, 6), null, 2)}
+${JSON.stringify(data.vehiclePerformance.slice(0, 6))}
 
 EXPENSE CATEGORY BREAKDOWN:
-${JSON.stringify(data.expenseCategories, null, 2)}
+${JSON.stringify(data.expenseCategories)}
 
 MONTHLY REVENUE & PROFIT TRENDS:
-${JSON.stringify(data.monthlyTrends, null, 2)}
+${JSON.stringify(data.monthlyTrends)}
 
 REQUIREMENTS FOR JSON OUTPUT:
 Return ONLY valid JSON without markdown formatting, code blocks, or extra text. Format as following schema:
@@ -317,114 +318,52 @@ Return ONLY valid JSON without markdown formatting, code blocks, or extra text. 
 }
 `;
 
-  // Fast-failing external AI fetch with instant fallback
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3500);
+  // Groq AI API call — all forecast data generated dynamically
+  const groqApiKey = process.env.GROQ_API_KEY;
+  if (!groqApiKey) throw new Error("GROQ_API_KEY is not configured");
 
-    const res = await fetch("https://text.pollinations.ai/openai", {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 60000);
+
+  const validModels = [
+    "llama-3.1-8b-instant",
+    "llama-3.3-70b-versatile",
+    "gemma2-9b-it"
+  ];
+  const selectedModel = validModels[Math.floor(Math.random() * validModels.length)];
+
+  try {
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${groqApiKey}`
+      },
       signal: controller.signal,
       body: JSON.stringify({
         messages: [
           { role: "system", content: "You are a specialized business forecasting AI for vehicle dealerships. Always return strict, valid JSON without code blocks or markdown wrapping." },
           { role: "user", content: prompt }
         ],
-        model: "openai",
-        jsonMode: true
+        model: selectedModel,
+        temperature: 0.6,
+        max_tokens: 4096,
+        response_format: { type: "json_object" }
       })
     });
     clearTimeout(timeoutId);
 
-    if (res.ok) {
-      const rawText = await res.text();
-      const cleaned = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-      return JSON.parse(cleaned);
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "Unknown error");
+      throw new Error(`Groq API error (${res.status}): ${errText}`);
     }
-  } catch (err) {
-    // Proceed to deterministic mathematical engine fallback below
-  }
-    
-    // Deterministic data-driven fallback calculation
-    const projRev = Math.round(data.metrics.avgMonthlyRevenue * 3 * 1.12);
-    const projExp = Math.round(data.metrics.avgMonthlyExpense * 3 * 1.05);
 
-    return {
-      executiveSummary: `Carz One shows strong operational stability with a net profit margin of ${data.metrics.profitMarginPercent}%. Based on real transactions, vehicle sales (particularly luxury SUVs) generate the highest return. Reinvesting cash into high-margin inventory will maximize Q3 profitability.`,
-      revenueForecastNextQuarter: {
-        projectedRevenue: projRev,
-        projectedExpenses: projExp,
-        projectedNetProfit: projRev - projExp,
-        growthRatePercent: 12.0,
-        explanation: `Forecast calculated using past 12-month average monthly revenue of LKR ${data.metrics.avgMonthlyRevenue.toLocaleString()} adjusted for a estimated 12% quarterly sales expansion.`,
-        dataSource: "Live Sales Ledger & Historical 12-Month Cash Flow"
-      },
-      vehicleAcquisitionPlan: [
-        {
-          modelName: "BMW X5 xDrive45e M Sport",
-          action: "STRONG BUY",
-          recommendedUnits: 2,
-          estimatedUnitCost: 47500000,
-          expectedROI: "16.8%",
-          rationale: "Consistently top-performing revenue generator with high client demand and quick sales velocity.",
-          dataSource: "Vehicle Performance Ledger & Sales Records"
-        },
-        {
-          modelName: "Toyota Land Cruiser Prado TX-L",
-          action: "BUY",
-          recommendedUnits: 2,
-          estimatedUnitCost: 35000000,
-          expectedROI: "14.2%",
-          rationale: "Steady demand SUV maintaining strong trade-in and resale liquidity in the local market.",
-          dataSource: "Inventory Stock Analysis & Income Category Logs"
-        },
-        {
-          modelName: "Nissan X-Trail e-POWER / Honda Vezel",
-          action: "MODERATE BUY",
-          recommendedUnits: 3,
-          estimatedUnitCost: 22000000,
-          expectedROI: "12.5%",
-          rationale: "Fast turnaround fuel-efficient crossover options catering to mid-tier executive buyers.",
-          dataSource: "Client Inquiry Logs & Transaction History"
-        }
-      ],
-      marketingStrategies: [
-        {
-          strategy: "Digital Luxury Showroom Campaign",
-          focusArea: "Social Media Video Showcases & Direct VIP Prospecting",
-          recommendedBudgetLKR: 850000,
-          expectedRevenueImpact: "LKR 35,000,000+ in accelerated luxury SUV sales",
-          rationale: "Marketing expenditure currently represents only a small fraction of expenses. Increasing digital reach directly correlates to faster inventory turnover.",
-          dataSource: "Expense Breakdown (Marketing & Ads: LKR " + ((data.expenseCategories.find(c => c.category.includes("Marketing"))?.amount || 320000)).toLocaleString() + ")"
-        },
-        {
-          strategy: "Corporate Fleet & Lease Referral Partnering",
-          focusArea: "Banking & Financial Lease Advisory",
-          recommendedBudgetLKR: 400000,
-          expectedRevenueImpact: "LKR 20,000,000 in lease referral commissions & direct corporate sales",
-          rationale: "Leverages existing relationship with financial institutions to capture high-value corporate clients.",
-          dataSource: "Client Revenue Ledger & Bank Account Transfer Logs"
-        }
-      ],
-      cashFlowRiskMitigation: [
-        {
-          risk: "Outstanding Receivables Lockup",
-          impactSeverity: "HIGH",
-          recommendedAction: `Collect on LKR ${data.metrics.unpaidInvoiceAmount.toLocaleString()} in outstanding balance across ${data.metrics.unpaidInvoiceCount} invoices by establishing strict 14-day payment milestones.`,
-          dataSource: `Invoices Table (LKR ${data.metrics.unpaidInvoiceAmount.toLocaleString()} total unpaid due)`
-        },
-        {
-          risk: "High Inventory Holding Cost",
-          impactSeverity: "MEDIUM",
-          recommendedAction: `Active vehicle stock holds LKR ${data.metrics.activeStockValue.toLocaleString()} in capital. Implement 45-day price adjustment rules to maintain high asset liquidity.`,
-          dataSource: `Vehicle Stock Table (${data.metrics.stockCount} vehicles in current inventory)`
-        }
-      ],
-      actionableMilestones: [
-        `Target LKR ${projRev.toLocaleString()} in Q3 Gross Revenue.`,
-        `Acquire 2 units of BMW X5 / Land Cruiser Prado using available liquid bank reserves.`,
-        `Recoup LKR ${data.metrics.unpaidInvoiceAmount.toLocaleString()} in pending receivables within 30 days.`
-      ]
-    };
+    const resData = await res.json();
+    const content = resData.choices?.[0]?.message?.content || "";
+    const cleaned = content.replace(/```json/g, '').replace(/```/g, '').trim();
+    return JSON.parse(cleaned);
+  } catch (err) {
+    clearTimeout(timeoutId);
+    throw err;
   }
+}

@@ -195,7 +195,7 @@ const handleDelete = async (id: number) => {
       </div>
 
       {/* Table */}
-      <div className="bg-[#ffffff] border border-[#e2e8f0] rounded-3xl overflow-hidden shadow-xs">
+      <div className="bg-[#ffffff] border border-[#e2e8f0] overflow-hidden shadow-xs" style={{ borderRadius: 16 }}>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -283,11 +283,11 @@ const handleDelete = async (id: number) => {
         </div>
       </div>
 
-      {/* Receipt Viewer Modal */}
+      {/* PDF Viewing Modal */}
       {viewingReceipt && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md" onClick={() => setViewingReceipt(null)}>
-          <div className="relative flex flex-col md:flex-row bg-[#0a0a0a] border border-white/10 rounded-3xl overflow-hidden max-w-5xl w-full max-h-[90vh] shadow-2xl" onClick={e => e.stopPropagation()}>
-            <button className="absolute top-4 right-4 z-10 p-2 bg-black/50 hover:bg-white/20 rounded-full text-white transition-colors backdrop-blur-md" onClick={() => setViewingReceipt(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#020b12]/60 backdrop-blur-sm" onClick={() => setViewingReceipt(null)}>
+          <div className="relative flex flex-col md:flex-row bg-white border border-[#e2e8f0] overflow-hidden max-w-5xl w-full max-h-[90vh] shadow-2xl" style={{ borderRadius: 16 }} onClick={e => e.stopPropagation()}>
+            <button className="absolute top-4 right-4 z-10 p-2 bg-black/50 hover:bg-white/20 text-white transition-colors backdrop-blur-md" style={{ borderRadius: 9999 }} onClick={() => setViewingReceipt(null)}>
               ✕
             </button>
             

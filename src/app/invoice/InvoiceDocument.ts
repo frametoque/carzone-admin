@@ -38,8 +38,8 @@ export async function generateInvoicePDF(invoice: any, isQuotation = false): Pro
     doc.setFontSize(8.5);
     doc.setTextColor(textMuted[0], textMuted[1], textMuted[2]);
     doc.text("Premium Automotive Dealership & Services", 15, 27);
-    doc.text("No. 142, Baseline Road, Colombo 09, Sri Lanka", 15, 31);
-    doc.text("Phone: +94 11 268 8888 | Email: info@carzone.lk", 15, 35);
+    doc.text("499 Sunethradevi Rd, Nugegoda, Sri Lanka", 15, 31);
+    doc.text("Phone: +94 70 173 6077 | Email: info@carzone.lk", 15, 35);
 
     // Document Title & Reference Box (Right side)
     const docTitle = isQuotation ? "QUOTATION" : "INVOICE";

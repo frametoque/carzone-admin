@@ -35,19 +35,28 @@ export default function ClientsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState(emptyForm);
 
-  const loadData = async () => {
+  const loadData = async (isCurrent?: () => boolean) => {
     setLoading(true);
     try {
       const res = await getClients();
+      if (isCurrent && !isCurrent()) return;
       setData(res);
     } catch (e) {
-      console.error("Failed to load clients", e);
+      if (!isCurrent || isCurrent()) {
+        console.error("Failed to load clients", e);
+      }
     } finally {
-      setLoading(false);
+      if (!isCurrent || isCurrent()) {
+        setLoading(false);
+      }
     }
   };
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => { 
+    let current = true;
+    loadData(() => current); 
+    return () => { current = false; };
+  }, []);
 
   const openNew = () => {
     setEditingId(null);

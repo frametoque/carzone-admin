@@ -302,7 +302,7 @@ export default function AccountsPage() {
 
                 {acc.type === "bank" && (
                   <div className="mt-4 text-xs text-gray-400 space-y-0.5">
-                    <p><span className="font-medium text-gray-300">Bank:</span> {acc.bankName}</p>
+
                     <p><span className="font-medium text-gray-300">A/C:</span> {acc.accountNumber}</p>
                     {acc.branch && <p><span className="font-medium text-gray-300">Branch:</span> {acc.branch}</p>}
                   </div>

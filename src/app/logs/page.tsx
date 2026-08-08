@@ -28,30 +28,53 @@ export default function SettingsPage() {
   const [clearing, setClearing] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
-  const fetchLogs = useCallback(async () => {
+  const fetchLogs = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     try {
-      const res = await fetch("/api/logs");
+      const res = await fetch("/api/logs", { signal });
       if (res.ok) {
         const data = await res.json();
-        setLogs(data.logs || []);
+        if (!signal?.aborted) {
+          setLogs(data.logs || []);
+        }
       }
-    } catch (err) {
-      console.error("Failed to fetch logs:", err);
+    } catch (err: any) {
+      if (err.name !== 'AbortError') {
+        console.error("Failed to fetch logs:", err);
+      }
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
     }
   }, []);
 
   // Auto-cleanup old logs on mount, then fetch
   useEffect(() => {
+    const controller = new AbortController();
     const init = async () => {
       try {
-        await fetch("/api/logs/cleanup", { method: "DELETE" });
+        await fetch("/api/logs/cleanup", { method: "DELETE", signal: controller.signal });
       } catch {}
-      fetchLogs();
+      fetchLogs(controller.signal);
     };
     init();
+    return () => {
+      controller.abort();
+    };
+  }, [fetchLogs]);
+
+  useEffect(() => {
+    const handleRefresh = () => fetchLogs();
+    const handleClear = () => setShowClearConfirm(true);
+
+    window.addEventListener("logs:refresh", handleRefresh);
+    window.addEventListener("logs:clear", handleClear);
+
+    return () => {
+      window.removeEventListener("logs:refresh", handleRefresh);
+      window.removeEventListener("logs:clear", handleClear);
+    };
   }, [fetchLogs]);
 
   const handleClearLogs = async () => {
@@ -83,34 +106,6 @@ export default function SettingsPage() {
 
   return (
     <div>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-white tracking-tight">
-          System Activity Logs
-        </h2>
-        <div className="flex items-center gap-3">
-          {/* Clear Logs */}
-          <button
-            onClick={() => setShowClearConfirm(true)}
-            disabled={clearing || logs.length === 0}
-            className="flex items-center gap-2 px-4 py-2 bg-red-500/15 border border-red-500/30 hover:bg-red-500/25 text-red-400 hover:text-red-300 rounded-xl text-sm font-medium transition-all duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <Trash2 className="w-4 h-4" />
-            Clear Logs
-          </button>
-          {/* Refresh */}
-          <button
-            onClick={fetchLogs}
-            disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 hover:bg-white/10 text-gray-300 hover:text-white rounded-xl text-sm font-medium transition-all duration-150 cursor-pointer disabled:opacity-40"
-          >
-            <RefreshCw
-              className={`w-4 h-4 ${loading ? "animate-spin" : ""}`}
-            />
-            Refresh
-          </button>
-        </div>
-      </div>
 
       {/* Clear Confirmation Modal */}
       {showClearConfirm && (

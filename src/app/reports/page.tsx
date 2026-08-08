@@ -19,6 +19,8 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { getReports, getClients, getMainLedger } from "../actions/actions";
 import { SkeletonCards, SkeletonTable } from "../components/SkeletonUI";
 import DateRangeSelector from "../components/DateRangeSelector";
+import { AnimatedCounter } from "../components/AnimatedCounter";
+import { getCachedData, setCachedData } from "@/lib/cache";
 import { jsPDF } from "jspdf";
 
 const formatLKR = (amount: number) => {
@@ -52,7 +54,17 @@ export default function ReportsPage() {
   useEffect(() => {
     let active = true;
     async function load() {
-      setLoading(true);
+      const cacheKey = "reports_lifetime";
+      const cached = getCachedData(cacheKey);
+      if (cached) {
+        setData(cached.res);
+        setClients(cached.cls);
+        setLedgerEntries(cached.ledger);
+        setLoading(false); // Instant load
+      } else {
+        setLoading(true);
+      }
+
       try {
         const [res, cls, ledger] = await Promise.all([
           getReports("lifetime"),
@@ -63,6 +75,7 @@ export default function ReportsPage() {
           setData(res);
           setClients(cls);
           setLedgerEntries(ledger);
+          setCachedData(cacheKey, { res, cls, ledger });
         }
       } catch (e) {
         if (active) {
@@ -283,10 +296,10 @@ export default function ReportsPage() {
     });
 
   const stats = [
-    { label: "Total Revenue", value: formatLKR(pnlData.totalIncome), icon: TrendingUp, color: "text-green-400", bg: "bg-green-400/10" },
-    { label: "Total Expenses", value: formatLKR(pnlData.totalExpenses), icon: TrendingDown, color: "text-red-400", bg: "bg-red-400/10" },
-    { label: "Net Profit", value: formatLKR(pnlData.netProfit), icon: DollarSign, color: "text-brand-400", bg: "bg-brand-400/10" },
-    { label: "Profit Margin", value: `${pnlData.netProfitPercent.toFixed(1)}%`, icon: Percent, color: "text-blue-400", bg: "bg-blue-400/10" },
+    { label: "Total Revenue", value: pnlData.totalIncome, currency: true, icon: TrendingUp, color: "text-green-400", bg: "bg-green-400/10" },
+    { label: "Total Expenses", value: pnlData.totalExpenses, currency: true, icon: TrendingDown, color: "text-red-400", bg: "bg-red-400/10" },
+    { label: "Net Profit", value: pnlData.netProfit, currency: true, icon: DollarSign, color: "text-brand-400", bg: "bg-brand-400/10" },
+    { label: "Profit Margin", value: pnlData.netProfitPercent, currency: false, isPercent: true, icon: Percent, color: "text-blue-400", bg: "bg-blue-400/10" },
   ];
 
   const expensesBreakdownChart = Object.entries(pnlData.expenses)
@@ -578,7 +591,13 @@ export default function ReportsPage() {
                 </div>
                 <div>
                   <p className="text-gray-400 text-sm">{stat.label}</p>
-                  <p className="text-2xl font-semibold text-white">{stat.value}</p>
+                  <AnimatedCounter 
+                    value={stat.value as number} 
+                    currency={stat.currency} 
+                    decimals={stat.isPercent ? 1 : 0} 
+                    className="text-2xl font-semibold text-white block" 
+                  />
+                  {stat.isPercent && <span className="text-2xl font-semibold text-white">%</span>}
                 </div>
               </div>
             ))}

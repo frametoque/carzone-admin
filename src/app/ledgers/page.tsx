@@ -28,6 +28,7 @@ import {
   getJournalEntry
 } from "../actions/actions";
 import { SkeletonCards, SkeletonTable } from "../components/SkeletonUI";
+import { getCachedData, setCachedData } from "@/lib/cache";
 
 const formatLKR = (amount: number) => {
   return new Intl.NumberFormat('en-LK', {
@@ -186,19 +187,30 @@ export default function LedgersPage() {
   };
 
   const loadLedgerData = async (isCurrent?: () => boolean) => {
-    setLoading(true);
+    const cacheKey = `ledger_${activeTab}_${selectedAccountId}`;
+    const cached = getCachedData(cacheKey);
+    if (cached) {
+      setEntries(cached);
+      setLoading(false); // Instant load
+    } else {
+      setLoading(true);
+    }
+
     try {
       if (activeTab === "general") {
         const data = await getMainLedger("lifetime");
         if (isCurrent && !isCurrent()) return;
         setEntries(data);
+        setCachedData(cacheKey, data);
       } else if (activeTab === "individual" && selectedAccountId !== "") {
         const data = await getAccountLedger(Number(selectedAccountId), "lifetime");
         if (isCurrent && !isCurrent()) return;
         setEntries(data);
+        setCachedData(cacheKey, data);
       } else {
         if (!isCurrent || isCurrent()) {
           setEntries([]);
+          setCachedData(cacheKey, []);
         }
       }
     } catch (e) {

@@ -298,7 +298,7 @@ export async function createIncome(data: any) {
   if (newId && data.accountId) {
     await syncLedgerEntry('income', newId, data.date, data.amount, data.description, data.accountId);
   }
-  await logActivity(`Created income: Recorded $${data.amount} for "${data.description || ''}"`);
+  await logActivity(`Created income: Recorded LKR ${data.amount} for "${data.description || ''}"`);
 }
 
 export async function createClient(data: { name: string; email?: string | null; company?: string | null; phone?: string | null; address?: string | null; birthday?: string | null }): Promise<string> {
@@ -351,7 +351,7 @@ export async function updateIncome(id: number, data: any) {
     WHERE id = ${id}
   `;
   await syncLedgerEntry('income', id, data.date, data.amount, data.description, data.accountId || null);
-  await logActivity(`Updated income ${id}: recorded $${data.amount} for "${data.description || ''}"`);
+  await logActivity(`Updated income ${id}: recorded LKR ${data.amount} for "${data.description || ''}"`);
 }
 
 export async function deleteIncome(id: number) {
@@ -404,7 +404,7 @@ export async function createExpense(data: any) {
   if (newId && data.accountId) {
     await syncLedgerEntry('expense', newId, data.date, data.amount, data.description, data.accountId);
   }
-  await logActivity(`Created expense: Recorded $${data.amount} for "${data.description || ''}"`);
+  await logActivity(`Created expense: Recorded LKR ${data.amount} for "${data.description || ''}"`);
 }
 
 export async function updateExpense(id: number, data: any) {
@@ -414,7 +414,7 @@ export async function updateExpense(id: number, data: any) {
     WHERE id = ${id}
   `;
   await syncLedgerEntry('expense', id, data.date, data.amount, data.description, data.accountId || null);
-  await logActivity(`Updated expense ${id}: recorded $${data.amount} for "${data.description || ''}"`);
+  await logActivity(`Updated expense ${id}: recorded LKR ${data.amount} for "${data.description || ''}"`);
 }
 
 export async function deleteExpense(id: number) {
@@ -540,7 +540,7 @@ export async function recordInvoicePayment(invoiceId: string, paidAmount: number
       await syncLedgerEntry('income', newId, paymentDate, paidAmount, `Payment for Invoice #${invoiceId}`, accountId);
     }
 
-    await logActivity(`Recorded payment of $${paidAmount} via Bank Transfer for invoice ${invoiceId}`);
+    await logActivity(`Recorded payment of LKR ${paidAmount} via Bank Transfer for invoice ${invoiceId}`);
     return { success: true };
   } catch (error: any) {
     console.error("Failed to record invoice payment:", error);

@@ -1,6 +1,6 @@
 "use client";
 export const dynamic = "force-dynamic";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -44,7 +44,10 @@ import {
   ArrowLeftRight,
   RefreshCw,
   Cake,
-  Settings
+  Settings,
+  Terminal,
+  Trash2,
+  ChevronDown
 } from "lucide-react";
 import { getTodayBirthdays } from "./actions/actions";
 
@@ -101,7 +104,7 @@ const getDocumentTitle = (path: string): string => {
   if (path.startsWith("/expenses")) return "Expenses | Carz One";
   if (path.startsWith("/reports")) return "Reports | Carz One";
   if (path.startsWith("/forecasts")) return "Forecasts | Carz One";
-  if (path.startsWith("/settings")) return "Settings | Carz One";
+  if (path.startsWith("/logs")) return "Logs | Carz One";
   if (path === "/login") return "Login | Carz One";
   return "Admin | Carz One";
 };
@@ -259,15 +262,42 @@ const Header = ({ user, isLoaded, setMobileMenuOpen }: { user: any; isLoaded: bo
   const isClients = pathname.startsWith("/clients");
 
   // Date Range Context / state for top bar
-  const [dateRange, setDateRange] = useState("this year");
+  const isReportsOrForecasts = pathname.startsWith("/reports") || pathname.startsWith("/forecasts");
+  const [dateRange, setDateRange] = useState(isReportsOrForecasts ? "this year" : "lifetime");
   const [startDate, setStartDate] = useState(() => {
-    const today = new Date();
-    return `${today.getFullYear()}-01-01`;
+    if (isReportsOrForecasts) {
+      const today = new Date();
+      return `${today.getFullYear()}-01-01`;
+    }
+    return "1970-01-01";
   });
   const [endDate, setEndDate] = useState(() => {
-    const today = new Date();
-    return today.toISOString().split("T")[0];
+    if (isReportsOrForecasts) {
+      const today = new Date();
+      return today.toISOString().split("T")[0];
+    }
+    return "2099-12-31";
   });
+
+  const pageGroup = isReportsOrForecasts ? "reports" : "general";
+  const prevPageGroupRef = useRef(pageGroup);
+
+  useEffect(() => {
+    if (prevPageGroupRef.current !== pageGroup) {
+      const today = new Date();
+      const todayStr = today.toISOString().split("T")[0];
+      if (pageGroup === "reports") {
+        setDateRange("this year");
+        setStartDate(`${today.getFullYear()}-01-01`);
+        setEndDate(todayStr);
+      } else {
+        setDateRange("lifetime");
+        setStartDate("1970-01-01");
+        setEndDate("2099-12-31");
+      }
+      prevPageGroupRef.current = pageGroup;
+    }
+  }, [pageGroup]);
 
   const handleRangeChange = (range: string) => {
     setDateRange(range);
@@ -344,7 +374,7 @@ const Header = ({ user, isLoaded, setMobileMenuOpen }: { user: any; isLoaded: bo
     if (path.startsWith("/expenses")) return "Expenses";
     if (path.startsWith("/reports")) return "Reports";
     if (path.startsWith("/forecasts")) return "Forecasts";
-    if (path.startsWith("/settings")) return "Settings";
+    if (path.startsWith("/logs")) return "System Logs";
     return "Admin";
   };
 
@@ -382,6 +412,7 @@ const Header = ({ user, isLoaded, setMobileMenuOpen }: { user: any; isLoaded: bo
   const [reportsTab, setReportsTab] = useState<string>("overview");
   const [tbAsOfDate, setTbAsOfDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [todayBirthdays, setTodayBirthdays] = useState<any[]>([]);
+  const [hideBirthdayBtn, setHideBirthdayBtn] = useState(false);
 
   useEffect(() => {
     async function loadBirthdays() {
@@ -393,6 +424,13 @@ const Header = ({ user, isLoaded, setMobileMenuOpen }: { user: any; isLoaded: bo
       }
     }
     loadBirthdays();
+
+    // Check if birthday button was hidden today
+    const hiddenDate = localStorage.getItem("birthday-btn-hidden-date");
+    const todayStr = new Date().toISOString().split("T")[0];
+    if (hiddenDate === todayStr) {
+      setHideBirthdayBtn(true);
+    }
 
     const handleTabChange = (e: Event) => {
       const customEvt = e as CustomEvent<string>;
@@ -454,7 +492,7 @@ const Header = ({ user, isLoaded, setMobileMenuOpen }: { user: any; isLoaded: bo
             </h1>
             {isDashboard && (
               <p className="text-xs text-gray-400 font-medium -mt-0.5">
-                {getGreeting()}, {userName}
+                {getGreeting()} !
               </p>
             )}
           </div>
@@ -476,12 +514,17 @@ const Header = ({ user, isLoaded, setMobileMenuOpen }: { user: any; isLoaded: bo
           )}
 
           {/* Today Birthdays Button in Top Bar */}
-          {isDashboardOrClientsPage && todayBirthdays.length > 0 && (
+          {isDashboardOrClientsPage && todayBirthdays.length > 0 && !(pathname === "/dashboard" && hideBirthdayBtn) && (
             <>
               <span className="hidden sm:block w-[1px] h-6 bg-white/20" />
               <button
                 type="button"
                 onClick={() => {
+                  if (pathname === "/dashboard") {
+                    setHideBirthdayBtn(true);
+                    const todayStr = new Date().toISOString().split("T")[0];
+                    localStorage.setItem("birthday-btn-hidden-date", todayStr);
+                  }
                   if (todayBirthdays.length === 1) {
                     const client = todayBirthdays[0];
                     const rawMsg = "\u{1F389} Happy Birthday, " + client.name + "! \u{1F382}\u{1F697}\n\nThe entire *Carz One Motor Trading* team wishes you a fantastic birthday filled with happiness, success, and unforgettable moments! \u{1F973}\u{2728}\n\nMay your journey ahead be filled with new opportunities, exciting adventures, and many miles of success. \u{1F6E3}\u{FE0F}\u{1F3C6}\n\n*Keep moving forward. Keep chasing your dreams!* \u{1F698}\u{1F4A8}\n\n*Carz One Motor Trading*";
@@ -492,7 +535,7 @@ const Header = ({ user, isLoaded, setMobileMenuOpen }: { user: any; isLoaded: bo
                     window.location.href = '/clients';
                   }
                 }}
-                className="flex items-center gap-2 px-3.5 py-1.5 bg-[#b45309] hover:bg-[#92400e] text-[#ffffff] rounded-full font-bold transition-all cursor-pointer text-xs whitespace-nowrap shadow-sm animate-pulse border border-amber-500/40"
+                className="flex items-center gap-2 px-3.5 py-1.5 bg-[#b45309] hover:bg-[#92400e] text-[#ffffff] rounded-full font-bold transition-all cursor-pointer text-xs whitespace-nowrap shadow-sm border border-amber-500/40"
                 title={`${todayBirthdays.length} Client Birthday(s) Today! Click to send WhatsApp wish`}
               >
                 <Cake className="w-4 h-4 text-[#ffffff]" />
@@ -505,13 +548,38 @@ const Header = ({ user, isLoaded, setMobileMenuOpen }: { user: any; isLoaded: bo
           )}
 
           {/* Page Specific Action Buttons on Top Bar */}
+          {pathname.startsWith("/logs") && (
+            <>
+              <span className="hidden sm:block w-[1px] h-6 bg-white/20" />
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent("logs:clear"))}
+                className="flex items-center gap-1.5 px-4 py-2 bg-red-500/15 hover:bg-red-500/25 text-red-400 rounded-full font-semibold transition-colors cursor-pointer text-xs whitespace-nowrap"
+                style={{ minHeight: 44 }}
+              >
+                <Trash2 className="w-4 h-4" />
+                <span className="hidden sm:inline">Clear Logs</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent("logs:refresh"))}
+                className="flex items-center gap-1.5 px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-full font-semibold transition-colors cursor-pointer text-xs whitespace-nowrap"
+                style={{ minHeight: 44 }}
+              >
+                <RefreshCw className="w-4 h-4" />
+                <span className="hidden sm:inline">Refresh</span>
+              </button>
+            </>
+          )}
+
           {pathname.startsWith("/stock") && (
             <>
               <span className="hidden sm:block w-[1px] h-5 bg-white/15" />
               <button
                 type="button"
                 onClick={() => window.dispatchEvent(new CustomEvent("stock:open-new"))}
-                className="flex items-center gap-1.5 px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-3xl font-semibold transition-colors cursor-pointer text-xs whitespace-nowrap"
+                className="flex items-center gap-1.5 px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-full font-semibold transition-colors cursor-pointer text-xs whitespace-nowrap"
+                style={{ minHeight: 44 }}
               >
                 <Plus className="w-4 h-4" />
                 <span>Add Vehicle</span>
@@ -526,7 +594,8 @@ const Header = ({ user, isLoaded, setMobileMenuOpen }: { user: any; isLoaded: bo
                 <button
                   type="button"
                   onClick={() => window.dispatchEvent(new CustomEvent("accounts:open-transfer"))}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-white/5 border border-white/10 hover:bg-white/10 text-white rounded-3xl font-semibold transition-colors cursor-pointer text-xs whitespace-nowrap"
+                  className="flex items-center gap-1.5 px-4 py-2 bg-white/5 border border-white/10 hover:bg-white/10 text-white rounded-full font-semibold transition-colors cursor-pointer text-xs whitespace-nowrap"
+                  style={{ minHeight: 44 }}
                 >
                   <ArrowLeftRight className="w-4 h-4 text-brand-400" />
                   <span>Transfer Cash</span>
@@ -534,7 +603,8 @@ const Header = ({ user, isLoaded, setMobileMenuOpen }: { user: any; isLoaded: bo
                 <button
                   type="button"
                   onClick={() => window.dispatchEvent(new CustomEvent("accounts:open-new"))}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-3xl font-semibold transition-colors cursor-pointer text-xs whitespace-nowrap"
+                  className="flex items-center gap-1.5 px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-full font-semibold transition-colors cursor-pointer text-xs whitespace-nowrap"
+                  style={{ minHeight: 44 }}
                 >
                   <Plus className="w-4 h-4" />
                   <span>Add Account</span>
@@ -564,7 +634,8 @@ const Header = ({ user, isLoaded, setMobileMenuOpen }: { user: any; isLoaded: bo
                 <button
                   type="button"
                   onClick={() => window.dispatchEvent(new CustomEvent("clients:open-new"))}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-3xl font-semibold transition-colors cursor-pointer text-xs whitespace-nowrap"
+                  className="flex items-center gap-1.5 px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-full font-semibold transition-colors cursor-pointer text-xs whitespace-nowrap"
+                  style={{ minHeight: 44 }}
                 >
                   <Plus className="w-4 h-4" />
                   <span>Add Client</span>
@@ -579,7 +650,8 @@ const Header = ({ user, isLoaded, setMobileMenuOpen }: { user: any; isLoaded: bo
               <button
                 type="button"
                 onClick={() => window.dispatchEvent(new CustomEvent("expenses:open-new"))}
-                className="flex items-center gap-1.5 px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-3xl font-semibold transition-colors cursor-pointer text-xs whitespace-nowrap"
+                className="flex items-center gap-1.5 px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-full font-semibold transition-colors cursor-pointer text-xs whitespace-nowrap"
+                style={{ minHeight: 44 }}
               >
                 <Plus className="w-4 h-4" />
                 <span>Record Expense</span>
@@ -593,7 +665,8 @@ const Header = ({ user, isLoaded, setMobileMenuOpen }: { user: any; isLoaded: bo
               <button
                 type="button"
                 onClick={() => window.dispatchEvent(new CustomEvent("income:open-new"))}
-                className="flex items-center gap-1.5 px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-3xl font-semibold transition-colors cursor-pointer text-xs whitespace-nowrap"
+                className="flex items-center gap-1.5 px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-full font-semibold transition-colors cursor-pointer text-xs whitespace-nowrap"
+                style={{ minHeight: 44 }}
               >
                 <Plus className="w-4 h-4" />
                 <span>Record Income</span>
@@ -606,7 +679,8 @@ const Header = ({ user, isLoaded, setMobileMenuOpen }: { user: any; isLoaded: bo
               <span className="hidden sm:block w-[1px] h-5 bg-white/15" />
               <Link
                 href="/invoices/new"
-                className="flex items-center gap-1.5 px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-3xl font-semibold transition-colors cursor-pointer text-xs whitespace-nowrap"
+                className="flex items-center gap-1.5 px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-full font-semibold transition-colors cursor-pointer text-xs whitespace-nowrap"
+                style={{ minHeight: 44 }}
               >
                 <Plus className="w-4 h-4" />
                 <span>Create Invoice</span>
@@ -619,7 +693,8 @@ const Header = ({ user, isLoaded, setMobileMenuOpen }: { user: any; isLoaded: bo
               <span className="hidden sm:block w-[1px] h-5 bg-white/15" />
               <Link
                 href="/quotations/new"
-                className="flex items-center gap-1.5 px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-3xl font-semibold transition-colors cursor-pointer text-xs whitespace-nowrap"
+                className="flex items-center gap-1.5 px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-full font-semibold transition-colors cursor-pointer text-xs whitespace-nowrap"
+                style={{ minHeight: 44 }}
               >
                 <Plus className="w-4 h-4" />
                 <span>Create Quotation</span>
@@ -633,7 +708,8 @@ const Header = ({ user, isLoaded, setMobileMenuOpen }: { user: any; isLoaded: bo
               <button
                 type="button"
                 onClick={() => window.dispatchEvent(new CustomEvent("ledgers:open-transfer"))}
-                className="flex items-center gap-1.5 px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-3xl font-semibold transition-colors cursor-pointer text-xs whitespace-nowrap"
+                className="flex items-center gap-1.5 px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-full font-semibold transition-colors cursor-pointer text-xs whitespace-nowrap"
+                style={{ minHeight: 44 }}
               >
                 <ArrowLeftRight className="w-4 h-4" />
                 <span>Transfer Cash</span>
@@ -644,13 +720,30 @@ const Header = ({ user, isLoaded, setMobileMenuOpen }: { user: any; isLoaded: bo
           {pathname.startsWith("/forecasts") && (
             <>
               <span className="hidden sm:block w-[1px] h-5 bg-white/15" />
+              <div className="relative inline-flex items-center">
+                <select
+                  defaultValue="3"
+                  onChange={(e) => window.dispatchEvent(new CustomEvent("forecasts:range-change", { detail: { months: parseInt(e.target.value) } }))}
+                  className="text-[13px] font-semibold text-white cursor-pointer outline-none appearance-none transition-all pr-9 pl-3.5"
+                  style={{ minHeight: 44, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.18)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}
+                >
+                  <option value="1" style={{ color: '#1d1d1f', backgroundColor: 'white' }}>Next Month</option>
+                  <option value="3" style={{ color: '#1d1d1f', backgroundColor: 'white' }}>Next 3 Months</option>
+                  <option value="6" style={{ color: '#1d1d1f', backgroundColor: 'white' }}>Next 6 Months</option>
+                  <option value="12" style={{ color: '#1d1d1f', backgroundColor: 'white' }}>Next Year</option>
+                </select>
+                <div className="absolute right-3 pointer-events-none text-white/70">
+                  <ChevronDown className="w-4 h-4" />
+                </div>
+              </div>
               <button
                 type="button"
                 onClick={() => window.dispatchEvent(new CustomEvent("forecasts:refresh"))}
-                className="flex items-center gap-1.5 px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-3xl font-semibold transition-colors cursor-pointer text-xs whitespace-nowrap"
+                className="flex items-center gap-1.5 text-[13px] font-semibold text-white cursor-pointer whitespace-nowrap transition-all hover:opacity-80"
+                style={{ padding: '10px 18px', minHeight: 44, borderRadius: 9999, backgroundColor: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.18)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}
               >
-                <RefreshCw className="w-4 h-4" />
-                <span>Refresh Insights</span>
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Refresh</span>
               </button>
             </>
           )}
@@ -772,7 +865,7 @@ const Sidebar = ({
           x: mobileMenuOpen ? 0 : undefined,
         }}
         transition={sidebarSpring}
-        className={`fixed top-0 left-0 h-full bg-black backdrop-blur-xl border-r border-white/10 z-50
+        className={`fixed top-0 left-0 h-full bg-brand-500 backdrop-blur-xl border-r border-white/10 z-50
           ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}
         style={{ overflow: "hidden" }}
       >
@@ -859,8 +952,8 @@ const Sidebar = ({
                         : "w-10.5 justify-center p-0 mx-auto"
                       }
                       ${active
-                        ? "active-nav-link bg-white text-black font-semibold shadow-md shadow-black/20"
-                        : "text-gray-300 hover:bg-white/5"
+                        ? "active-nav-link bg-accent-500 text-white font-semibold shadow-md shadow-accent-900/40"
+                        : "text-brand-100 hover:bg-white/10 hover:text-white"
                       }`}
                   >
                     {/* Fixed 42px icon box */}
@@ -882,30 +975,30 @@ const Sidebar = ({
 
           {/* User section & Branding Footer */}
           <div className="p-3 border-t border-white/10 space-y-1">
-            {/* Settings Link */}
+            {/* Logs Link */}
             <Link
-              href="/settings"
+              href="/logs"
               onClick={() => setMobileMenuOpen(false)}
               className={`flex items-center transition-all duration-150 overflow-hidden rounded-full h-10.5
                 ${desktopExpanded
                   ? "w-full justify-start px-0.5"
                   : "w-10.5 justify-center p-0 mx-auto"
                 }
-                ${pathname.startsWith("/settings")
-                  ? "active-nav-link bg-white text-black font-semibold shadow-md shadow-black/20"
-                  : "text-gray-300 hover:bg-white/5"
+                ${pathname.startsWith("/logs")
+                  ? "active-nav-link bg-accent-500 text-white font-semibold shadow-md shadow-accent-900/40"
+                  : "text-brand-100 hover:bg-white/10 hover:text-white"
                 }`}
             >
               <span className="w-10.5 h-10.5 flex-shrink-0 flex items-center justify-center">
-                <Settings className="w-5.5 h-5.5" />
+                <Terminal className="w-5.5 h-5.5" />
               </span>
 
               {desktopExpanded && (
                 <span className="hidden lg:block overflow-hidden whitespace-nowrap text-sm font-medium pl-1 pr-3">
-                  Settings
+                  Logs
                 </span>
               )}
-              <span className="lg:hidden text-sm font-medium pl-1 pr-3">Settings</span>
+              <span className="lg:hidden text-sm font-medium pl-1 pr-3">Logs</span>
             </Link>
 
             {/* Logout Button */}
