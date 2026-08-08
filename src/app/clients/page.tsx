@@ -10,7 +10,7 @@ const formatLKR = (amount: number) =>
   new Intl.NumberFormat('en-LK', { style: 'currency', currency: 'LKR' }).format(amount || 0);
 
 const getBirthdayMessage = (clientName: string) => {
-  return "\u{1F389} Happy Birthday, " + clientName + "! \u{1F382}\u{1F697}\n\nThe entire *Carz One Motor Trading* team wishes you a fantastic birthday filled with happiness, success, and unforgettable moments! \u{1F973}\u{2728}\n\nMay your journey ahead be filled with new opportunities, exciting adventures, and many miles of success. \u{1F6E3}\u{FE0F}\u{1F3C6}\n\n*Keep moving forward. Keep chasing your dreams!* \u{1F698}\u{1F4A8}\n\n*Carz One Motor Trading*";
+  return "\u{1F389} Happy Birthday, " + clientName + "! \u{1F382}\u{1F697}\n\nThe entire *Carz ONE Motor Trading* team wishes you a fantastic birthday filled with happiness, success, and unforgettable moments! \u{1F973}\u{2728}\n\nMay your journey ahead be filled with new opportunities, exciting adventures, and many miles of success. \u{1F6E3}\u{FE0F}\u{1F3C6}\n\n*Keep moving forward. Keep chasing your dreams!* \u{1F698}\u{1F4A8}\n\n*Carz ONE Motor Trading*";
 };
 
 const sendWhatsAppWish = (phone: string | undefined, clientName: string) => {

@@ -24,10 +24,10 @@ export async function GET() {
 
     // Load profile from admin_users
     let profile = {
-      fullName: decoded.fullName || "Carz One Admin",
+      fullName: decoded.fullName || "Carz ONE Admin",
       email: decoded.email || "admin@carzone.lk",
       phone: "",
-      company: "Carz One",
+      company: "Carz ONE",
       website: "https://carzone.lk",
       address: "Colombo, Sri Lanka",
     };

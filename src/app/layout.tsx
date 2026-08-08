@@ -88,25 +88,25 @@ const labelVariants: Variants = {
 
 // Page title mapping for browser tabs
 const getDocumentTitle = (path: string): string => {
-  if (path === "/" || path === "/dashboard") return "Dashboard | Carz One";
-  if (path.startsWith("/stock")) return "Stock | Carz One";
-  if (path.startsWith("/accounts")) return "Accounts | Carz One";
-  if (path.startsWith("/ledgers")) return "Ledgers | Carz One";
-  if (path.startsWith("/clients")) return "Clients | Carz One";
+  if (path === "/" || path === "/dashboard") return "Dashboard | Carz ONE";
+  if (path.startsWith("/stock")) return "Stock | Carz ONE";
+  if (path.startsWith("/accounts")) return "Accounts | Carz ONE";
+  if (path.startsWith("/ledgers")) return "Ledgers | Carz ONE";
+  if (path.startsWith("/clients")) return "Clients | Carz ONE";
   if (path.startsWith("/invoice/")) {
     const parts = path.split("/");
     const id = parts[parts.length - 1];
-    return id ? `Invoice #${id} | Carz One` : "Invoice | Carz One";
+    return id ? `Invoice #${id} | Carz ONE` : "Invoice | Carz ONE";
   }
-  if (path.startsWith("/invoices")) return "Invoices | Carz One";
-  if (path.startsWith("/quotations")) return "Quotations | Carz One";
-  if (path.startsWith("/income")) return "Income | Carz One";
-  if (path.startsWith("/expenses")) return "Expenses | Carz One";
-  if (path.startsWith("/reports")) return "Reports | Carz One";
-  if (path.startsWith("/forecasts")) return "Forecasts | Carz One";
-  if (path.startsWith("/logs")) return "Logs | Carz One";
-  if (path === "/login") return "Login | Carz One";
-  return "Admin | Carz One";
+  if (path.startsWith("/invoices")) return "Invoices | Carz ONE";
+  if (path.startsWith("/quotations")) return "Quotations | Carz ONE";
+  if (path.startsWith("/income")) return "Income | Carz ONE";
+  if (path.startsWith("/expenses")) return "Expenses | Carz ONE";
+  if (path.startsWith("/reports")) return "Reports | Carz ONE";
+  if (path.startsWith("/forecasts")) return "Forecasts | Carz ONE";
+  if (path.startsWith("/settings")) return "Settings | Carz ONE";
+  if (path === "/login") return "Login | Carz ONE";
+  return "Admin | Carz ONE";
 };
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -170,7 +170,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return (
       <html lang="en" suppressHydrationWarning>
         <head>
-          <title>Admin | Carz One</title>
+          <title>Admin | Carz ONE</title>
           <meta name="robots" content="noindex, nofollow" />
         </head>
         <body className="bg-black text-white antialiased">
@@ -209,7 +209,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <title>Admin | Carz One</title>
+        <title>Admin | Carz ONE</title>
         <meta name="robots" content="noindex, nofollow" />
       </head>
       <body className="bg-black text-white antialiased">
@@ -327,7 +327,7 @@ const Header = ({ user, isLoaded, setMobileMenuOpen }: { user: any; isLoaded: bo
     if (path.startsWith("/expenses")) return "Expenses";
     if (path.startsWith("/reports")) return "Reports";
     if (path.startsWith("/forecasts")) return "Forecasts";
-    if (path.startsWith("/logs")) return "System Logs";
+    if (path.startsWith("/settings")) return "Settings";
     return "Admin";
   };
 
@@ -478,7 +478,7 @@ const Header = ({ user, isLoaded, setMobileMenuOpen }: { user: any; isLoaded: bo
                   }
                   if (todayBirthdays.length === 1) {
                     const client = todayBirthdays[0];
-                    const rawMsg = "\u{1F389} Happy Birthday, " + client.name + "! \u{1F382}\u{1F697}\n\nThe entire *Carz One Motor Trading* team wishes you a fantastic birthday filled with happiness, success, and unforgettable moments! \u{1F973}\u{2728}\n\nMay your journey ahead be filled with new opportunities, exciting adventures, and many miles of success. \u{1F6E3}\u{FE0F}\u{1F3C6}\n\n*Keep moving forward. Keep chasing your dreams!* \u{1F698}\u{1F4A8}\n\n*Carz One Motor Trading*";
+                    const rawMsg = "\u{1F389} Happy Birthday, " + client.name + "! \u{1F382}\u{1F697}\n\nThe entire *Carz ONE Motor Trading* team wishes you a fantastic birthday filled with happiness, success, and unforgettable moments! \u{1F973}\u{2728}\n\nMay your journey ahead be filled with new opportunities, exciting adventures, and many miles of success. \u{1F6E3}\u{FE0F}\u{1F3C6}\n\n*Keep moving forward. Keep chasing your dreams!* \u{1F698}\u{1F4A8}\n\n*Carz ONE Motor Trading*";
                     const msg = encodeURIComponent(rawMsg);
                     const phone = client.phone ? client.phone.replace(/[^0-9]/g, '') : '';
                     window.open(phone ? `https://api.whatsapp.com/send?phone=${phone}&text=${msg}` : `https://api.whatsapp.com/send?text=${msg}`, '_blank');
@@ -499,7 +499,7 @@ const Header = ({ user, isLoaded, setMobileMenuOpen }: { user: any; isLoaded: bo
           )}
 
           {/* Page Specific Action Buttons on Top Bar */}
-          {pathname.startsWith("/logs") && (
+          {pathname === "/settings/logs" && (
             <>
               <span className="hidden sm:block w-[1px] h-6 bg-white/20" />
               <button
@@ -831,7 +831,7 @@ const Sidebar = ({
                   <Link href="/" className="lg:block">
                     <Image
                       src="/logo-trans.png"
-                      alt="Carz One"
+                      alt="Carz ONE"
                       width={160}
                       height={36}
                       style={{ width: 'auto', height: '36px' }}
@@ -855,7 +855,7 @@ const Sidebar = ({
                 <div className="group-hover:opacity-0 transition-opacity duration-150 flex items-center justify-center">
                   <Image
                     src="/logo-trans.png"
-                    alt="Carz One"
+                    alt="Carz ONE"
                     width={40}
                     height={40}
                     style={{ width: 'auto', height: '40px' }}
@@ -926,30 +926,30 @@ const Sidebar = ({
 
           {/* User section & Branding Footer */}
           <div className="p-3 border-t border-white/10 space-y-1">
-            {/* Logs Link */}
+            {/* Settings Link */}
             <Link
-              href="/logs"
+              href="/settings"
               onClick={() => setMobileMenuOpen(false)}
               className={`flex items-center transition-all duration-150 overflow-hidden rounded-full h-10.5
                 ${desktopExpanded
                   ? "w-full justify-start px-0.5"
                   : "w-10.5 justify-center p-0 mx-auto"
                 }
-                ${pathname.startsWith("/logs")
+                ${pathname.startsWith("/settings")
                   ? "active-nav-link bg-accent-500 text-white font-semibold shadow-md shadow-accent-900/40"
                   : "text-brand-100 hover:bg-white/10 hover:text-white"
                 }`}
             >
               <span className="w-10.5 h-10.5 flex-shrink-0 flex items-center justify-center">
-                <Terminal className="w-5.5 h-5.5" />
+                <Settings className="w-5.5 h-5.5" />
               </span>
 
               {desktopExpanded && (
                 <span className="hidden lg:block overflow-hidden whitespace-nowrap text-sm font-medium pl-1 pr-3">
-                  Logs
+                  Settings
                 </span>
               )}
-              <span className="lg:hidden text-sm font-medium pl-1 pr-3">Logs</span>
+              <span className="lg:hidden text-sm font-medium pl-1 pr-3">Settings</span>
             </Link>
 
             {/* Logout Button */}

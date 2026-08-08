@@ -244,19 +244,19 @@ aside .border-b, aside .border-t {
 }
 
 aside nav a,
-aside a[href="/logs"] {
+aside a[href="/settings"] {
   color: #475569 !important; /* Clear Slate-600 text */
 }
 
 aside nav a:hover,
-aside a[href="/logs"]:hover {
+aside a[href="/settings"]:hover {
   background-color: rgba(0, 47, 76, 0.08) !important; /* Logo Deep Blue tint */
   color: #002f4c !important;
 }
 
 /* Active sidebar link (solid premium dark blue with shadow) */
 aside nav a.active-nav-link,
-aside a[href="/logs"].active-nav-link {
+aside a[href="/settings"].active-nav-link {
   background-color: #002f4c !important;
   color: #ffffff !important;
   box-shadow: 0 4px 6px -1px rgba(0, 47, 76, 0.15) !important;

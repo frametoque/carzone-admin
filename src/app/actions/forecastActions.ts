@@ -248,7 +248,7 @@ export async function getForecastsAnalysisData(): Promise<SystemAnalysisData> {
 export async function generateAIForecast(data: SystemAnalysisData, forecastMonths: number = 3) {
   const forecastLabel = forecastMonths === 1 ? 'Next Month' : forecastMonths === 3 ? 'Next Quarter (3 Months)' : forecastMonths === 6 ? 'Next 6 Months' : 'Next Year (12 Months)';
   const prompt = `
-You are an expert Automotive Dealership Financial Analyst and AI Business Planner for "Carz One".
+You are an expert Automotive Dealership Financial Analyst and AI Business Planner for "Carz ONE".
 Analyze the real live dealership dataset provided below and generate comprehensive, data-backed business forecasts for the period: ${forecastLabel} (${forecastMonths} months ahead). Provide inventory acquisition recommendations, marketing strategies, and financial risk predictions scaled to this ${forecastMonths}-month forecast window.
 
 LIVE DEALERSHIP DATASET:

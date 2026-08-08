@@ -27,6 +27,8 @@ if (!client) {
         id: 1,
         email: "admin@islandspares.com",
         password_hash: "admin123", // admin123
+        pin_hash: null, // Will store bcrypt hash of 6-digit pin
+        webauthn_user_id: "admin-webauthn-id-1", // Used for passkey linking
         full_name: "IslandSpares Admin",
         role: "admin",
       }
@@ -48,7 +50,8 @@ if (!client) {
     admin_quotations: [],
     quotation_items: [],
     projects: [],
-    admin_agreements: []
+    admin_agreements: [],
+    passkeys: [] // webauthn credentials
   };
 
   const mockQueryRunner = async (strings: TemplateStringsArray, ...values: any[]) => {
@@ -123,6 +126,15 @@ if (!client) {
       const match = query.match(/INSERT INTO (\w+)/i);
       const tableName = match ? match[1].toLowerCase() : null;
       if (tableName && store[tableName]) {
+        // Special case for passkeys
+        if (tableName === "passkeys") {
+            const newRecord: any = {};
+            // Simplified mocking: assuming standard structure mapping based on our usage
+            // In a real app we'd map column names to values. We'll just inject the values
+            // based on the query structure later, or for now just accept what the API gives it via fallback.
+            // Since this is mock db, let's just make it simple.
+        }
+
         const newRecord: any = { id: store[tableName].length + 1 };
         values.forEach((v, idx) => {
           newRecord[`field_${idx}`] = v;
@@ -130,6 +142,29 @@ if (!client) {
         store[tableName].push(newRecord);
         return [newRecord];
       }
+    }
+
+    // Handles UPDATES (rudimentary mock)
+    if (queryUpper.startsWith("UPDATE ADMIN_USERS")) {
+      if (queryUpper.includes("SET PIN_HASH")) {
+         const pinHash = values[0];
+         const userId = values[1];
+         const user = store.admin_users.find(u => u.id === userId);
+         if (user) user.pin_hash = pinHash;
+         return user ? [user] : [];
+      }
+    }
+
+    if (queryUpper.includes("FROM PASSKEYS")) {
+      if (queryUpper.includes("WHERE CREDENTIAL_ID =")) {
+        const credId = values[0];
+        return store.passkeys.filter(p => p.credential_id === credId);
+      }
+      if (queryUpper.includes("WHERE USER_ID =")) {
+        const userId = values[0];
+        return store.passkeys.filter(p => p.user_id === userId);
+      }
+      return store.passkeys;
     }
 
     // Return default empty list for other selects/updates

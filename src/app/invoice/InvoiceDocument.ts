@@ -226,8 +226,8 @@ export async function generateInvoicePDF(invoice: any, isQuotation = false): Pro
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
   doc.setTextColor(textMuted[0], textMuted[1], textMuted[2]);
-  doc.text("Thank you for choosing Carz One. All vehicle transactions are subject to standard dealership sales terms.", 105, footerY + 5, { align: "center" });
-  doc.text("Carz One (Pvt) Ltd. • Registered Company in Sri Lanka", 105, footerY + 9, { align: "center" });
+  doc.text("Thank you for choosing Carz ONE. All vehicle transactions are subject to standard dealership sales terms.", 105, footerY + 5, { align: "center" });
+  doc.text("Carz ONE (Pvt) Ltd. • Registered Company in Sri Lanka", 105, footerY + 9, { align: "center" });
 
   const arrayBuffer = doc.output("arraybuffer");
   return new Uint8Array(arrayBuffer);

@@ -22,7 +22,7 @@ export async function POST(request: Request) {
 
     try {
       const dbUsers = await sql`
-        SELECT id, email, password_hash, COALESCE(full_name, name, 'Admin') as full_name, COALESCE(role, 'admin') as role 
+        SELECT id, email, password_hash, pin_hash, COALESCE(full_name, name, 'Admin') as full_name, COALESCE(role, 'admin') as role 
         FROM admin_users 
         WHERE LOWER(email) = LOWER(${email.trim()})
       `;
@@ -36,6 +36,7 @@ export async function POST(request: Request) {
             email: user.email,
             fullName: user.full_name || "Admin",
             role: user.role || "admin",
+            pin_hash: user.pin_hash,
           };
         }
       }
@@ -49,39 +50,46 @@ export async function POST(request: Request) {
         authenticatedUser = {
           id: 999,
           email: ADMIN_EMAIL,
-          fullName: "Carz One Admin",
+          fullName: "Carz ONE Admin",
           role: "admin",
         };
       }
     }
 
-    if (!authenticatedUser) {
-      return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
+    // Check if the user actually has 2FA set up
+    const passkeys = await sql`SELECT credential_id FROM passkeys WHERE user_id = ${authenticatedUser.id}`;
+    const hasPasskeys = passkeys.length > 0;
+    const hasPin = !!authenticatedUser.pin_hash;
+
+    if (!hasPasskeys && !hasPin) {
+      // Create Session JWT
+      const token = jwt.sign(
+        {
+          id: authenticatedUser.id,
+          email: authenticatedUser.email,
+          fullName: authenticatedUser.fullName,
+          role: authenticatedUser.role,
+        },
+        JWT_SECRET,
+        { expiresIn: "7d" }
+      );
+
+      // Set secure Cookie
+      const response = NextResponse.json({ success: true, step2Required: false, user: authenticatedUser });
+      response.cookies.set("session", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 60 * 60 * 24 * 7, // 7 days
+        path: "/",
+      });
+
+      return response;
     }
 
-    // 3. Create Session JWT
-    const token = jwt.sign(
-      {
-        id: authenticatedUser.id,
-        email: authenticatedUser.email,
-        fullName: authenticatedUser.fullName,
-        role: authenticatedUser.role,
-      },
-      JWT_SECRET,
-      { expiresIn: "7d" }
-    );
-
-    // 4. Set secure Cookie
-    const response = NextResponse.json({ success: true, user: authenticatedUser });
-    response.cookies.set("session", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-      path: "/",
-    });
-
-    return response;
+    // For 2-Step Verification, we DO NOT issue the JWT session here.
+    // We just confirm the password is correct, and tell the client to proceed to Step 2 (Biometrics/PIN)
+    return NextResponse.json({ success: true, step2Required: true, user: { email: authenticatedUser.email } });
   } catch (error: any) {
     console.error("Login API Error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

@@ -127,7 +127,7 @@ export default function ForecastsPage() {
             <Loader2 className="w-6 h-6 animate-spin text-[#002f4c]" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-[#0f172a]">Analyzing Carz One Motor Trading Data...</h2>
+            <h2 className="text-xl font-bold text-[#0f172a]">Analyzing Carz ONE Motor Trading Data...</h2>
             <p className="text-sm text-[#64748b] mt-1">Aggregating historical sales, vehicle inventory stock, income ledgers, and expenses.</p>
           </div>
         </div>
