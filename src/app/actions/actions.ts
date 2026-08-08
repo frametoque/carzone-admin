@@ -1014,13 +1014,13 @@ export async function getReports(range = 'lifetime', startDate?: string, endDate
   const incomes = await sql`
     SELECT id, date, description, category, amount
     FROM admin_incomes
-    WHERE date >= ${cutoff}
+    WHERE date >= ${startLimit} AND date <= ${endLimit}
   `;
   
   const expenses = await sql`
     SELECT id, date, description, category, amount
     FROM admin_expenses
-    WHERE date >= ${cutoff}
+    WHERE date >= ${startLimit} AND date <= ${endLimit}
   `;
   
   const journalEntries = [
