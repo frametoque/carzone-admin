@@ -18,6 +18,10 @@ if (DATABASE_URL) {
 
 // 3. Fallback Mock Query Runner if DATABASE_URL is missing or connection failed
 if (!client) {
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("❌ CRITICAL ERROR: DATABASE_URL environment variable is missing or failed in production. Mock Mode is disabled for production environments to prevent data loss.");
+  }
+
   console.warn("⚠️ DATABASE_URL environment variable is missing or failed. Dashboard is running in Mock Mode.");
 
   // Simple in-memory storage for testing without a database

@@ -6,7 +6,24 @@ import path from 'path';
 import { cookies, headers } from 'next/headers';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || "super-secret-carzone-jwt-token-key-change-me";
+const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV !== "production" ? "super-secret-carzone-jwt-token-key-change-me" : "");
+
+// Custom authentication check function
+async function requireAuth() {
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get("session");
+  
+  if (!sessionCookie?.value) {
+    throw new Error("Unauthorized: Session is missing");
+  }
+  
+  try {
+    if (!JWT_SECRET) throw new Error("JWT_SECRET is not configured in production");
+    jwt.verify(sessionCookie.value, JWT_SECRET);
+  } catch (error) {
+    throw new Error("Unauthorized: Invalid session");
+  }
+}
 
 // --- Activity Logger ---
 // Call this from any mutation action to log the activity.
@@ -46,7 +63,9 @@ export async function logActivity(action: string, extraInfo?: { os?: string; cli
 }
 
 export async function uploadReceipt(formData: FormData, type: 'income' | 'expenses'): Promise<string> {
-  const file = formData.get('file') as File;
+  
+  await requireAuth();
+const file = formData.get('file') as File;
   if (!file) throw new Error("No file uploaded");
 
   const buffer = Buffer.from(await file.arrayBuffer());
@@ -61,7 +80,9 @@ export async function uploadReceipt(formData: FormData, type: 'income' | 'expens
 
 // -- DASHBOARD --
 export async function getDashboardData(startDateString?: string, endDateString?: string) {
-  const startLimit = startDateString ? new Date(startDateString) : new Date("1970-01-01");
+  
+  await requireAuth();
+const startLimit = startDateString ? new Date(startDateString) : new Date("1970-01-01");
   const endLimit = endDateString ? new Date(endDateString) : new Date("2099-12-31");
   endLimit.setHours(23, 59, 59, 999);
 
@@ -261,7 +282,9 @@ function combineDateWithCurrentTime(inputDate: any): Date {
 
 // -- INCOMES --
 export async function getIncomes(range = 'lifetime', startDate?: string, endDate?: string) {
-  let startLimit = new Date(getCutoffDate(range));
+  
+  await requireAuth();
+let startLimit = new Date(getCutoffDate(range));
   let endLimit = new Date("2099-12-31");
   if (startDate && endDate) {
     startLimit = new Date(startDate);
@@ -296,7 +319,9 @@ export async function getIncomes(range = 'lifetime', startDate?: string, endDate
 }
 
 export async function createIncome(data: any) {
-  const result = await sql`
+  
+  await requireAuth();
+const result = await sql`
     INSERT INTO admin_incomes (date, amount, description, category, payment_method, invoice_id, client_id, receipt_url, account_id)
     VALUES (${data.date}, ${data.amount}, ${data.description}, ${data.category}, ${data.paymentMethod}, ${data.invoiceId || null}, ${data.clientId || null}, ${data.receiptUrl || null}, ${data.accountId || null})
     RETURNING id
@@ -309,7 +334,9 @@ export async function createIncome(data: any) {
 }
 
 export async function createClient(data: { name: string; email?: string | null; company?: string | null; phone?: string | null; address?: string | null; birthday?: string | null }): Promise<string> {
-  const clientId = 'C-' + Date.now();
+  
+  await requireAuth();
+const clientId = 'C-' + Date.now();
   await sql`
     INSERT INTO admin_clients (id, full_name, email, company, phone, address, birthday, active)
     VALUES (${clientId}, ${data.name}, ${data.email || null}, ${data.company || null}, ${data.phone || null}, ${data.address || null}, ${data.birthday || null}, true)
@@ -319,7 +346,9 @@ export async function createClient(data: { name: string; email?: string | null; 
 }
 
 export async function updateClient(clientId: string, data: { name?: string; email?: string | null; company?: string | null; phone?: string | null; address?: string | null; birthday?: string | null }) {
-  // Fetch current email first so we can cascade if it changes
+  
+  await requireAuth();
+// Fetch current email first so we can cascade if it changes
   const existing = await sql`SELECT email FROM admin_clients WHERE id = ${clientId}`;
   if (existing.length === 0) throw new Error("Client not found");
   const oldEmail = existing[0].email as string | null;
@@ -347,12 +376,16 @@ export async function updateClient(clientId: string, data: { name?: string; emai
 }
 
 export async function deleteClient(clientId: string) {
-  await sql`DELETE FROM admin_clients WHERE id = ${clientId}`;
+  
+  await requireAuth();
+await sql`DELETE FROM admin_clients WHERE id = ${clientId}`;
   await logActivity(`Deleted client: ${clientId}`);
 }
 
 export async function updateIncome(id: number, data: any) {
-  await sql`
+  
+  await requireAuth();
+await sql`
     UPDATE admin_incomes 
     SET date = ${data.date}, amount = ${data.amount}, description = ${data.description}, category = ${data.category}, payment_method = ${data.paymentMethod}, invoice_id = ${data.invoiceId || null}, client_id = ${data.clientId || null}, receipt_url = ${data.receiptUrl || null}, account_id = ${data.accountId || null}
     WHERE id = ${id}
@@ -362,7 +395,9 @@ export async function updateIncome(id: number, data: any) {
 }
 
 export async function deleteIncome(id: number) {
-  const existing = await sql`SELECT account_id FROM admin_incomes WHERE id = ${id}`;
+  
+  await requireAuth();
+const existing = await sql`SELECT account_id FROM admin_incomes WHERE id = ${id}`;
   const oldAccountId = existing[0]?.account_id ? parseInt(existing[0].account_id) : null;
 
   await sql`DELETE FROM admin_incomes WHERE id = ${id}`;
@@ -375,7 +410,9 @@ export async function deleteIncome(id: number) {
 
 // -- EXPENSES --
 export async function getExpenses(range = 'lifetime', startDate?: string, endDate?: string) {
-  let startLimit = new Date(getCutoffDate(range));
+  
+  await requireAuth();
+let startLimit = new Date(getCutoffDate(range));
   let endLimit = new Date("2099-12-31");
   if (startDate && endDate) {
     startLimit = new Date(startDate);
@@ -409,7 +446,9 @@ export async function getExpenses(range = 'lifetime', startDate?: string, endDat
 }
 
 export async function createExpense(data: any) {
-  const result = await sql`
+  
+  await requireAuth();
+const result = await sql`
     INSERT INTO admin_expenses (date, amount, description, category, payment_method, receipt_url, account_id)
     VALUES (${data.date}, ${data.amount}, ${data.description}, ${data.category}, ${data.paymentMethod}, ${data.receiptUrl || null}, ${data.accountId || null})
     RETURNING id
@@ -422,7 +461,9 @@ export async function createExpense(data: any) {
 }
 
 export async function updateExpense(id: number, data: any) {
-  await sql`
+  
+  await requireAuth();
+await sql`
     UPDATE admin_expenses 
     SET date = ${data.date}, amount = ${data.amount}, description = ${data.description}, category = ${data.category}, payment_method = ${data.paymentMethod}, receipt_url = ${data.receiptUrl || null}, account_id = ${data.accountId || null}
     WHERE id = ${id}
@@ -432,7 +473,9 @@ export async function updateExpense(id: number, data: any) {
 }
 
 export async function deleteExpense(id: number) {
-  const existing = await sql`SELECT account_id FROM admin_expenses WHERE id = ${id}`;
+  
+  await requireAuth();
+const existing = await sql`SELECT account_id FROM admin_expenses WHERE id = ${id}`;
   const oldAccountId = existing[0]?.account_id ? parseInt(existing[0].account_id) : null;
 
   await sql`DELETE FROM admin_expenses WHERE id = ${id}`;
@@ -445,7 +488,9 @@ export async function deleteExpense(id: number) {
 
 // -- INVOICES --
 export async function getInvoices(range = 'lifetime', startDate?: string, endDate?: string) {
-  let startLimit = new Date(getCutoffDate(range));
+  
+  await requireAuth();
+let startLimit = new Date(getCutoffDate(range));
   let endLimit = new Date("2099-12-31");
   if (startDate && endDate) {
     startLimit = new Date(startDate);
@@ -495,7 +540,9 @@ export async function getInvoices(range = 'lifetime', startDate?: string, endDat
 }
 
 export async function deleteInvoice(id: string) {
-  await sql`
+  
+  await requireAuth();
+await sql`
     UPDATE admin_quotations
     SET linked_invoice_id = NULL,
         status = 'draft'
@@ -506,7 +553,9 @@ export async function deleteInvoice(id: string) {
 }
 
 export async function recordInvoicePayment(invoiceId: string, paidAmount: number, accountId: number, paymentDateString?: string) {
-  try {
+  
+  await requireAuth();
+try {
     const result = await sql`
       SELECT
         i.invoice_id,
@@ -572,7 +621,9 @@ export async function recordInvoicePayment(invoiceId: string, paidAmount: number
 }
 
 export async function getInvoiceByIdAdmin(invoiceId: string) {
-  // Join with admin_clients and bank_accs to get client name + billing address + bank account
+  
+  await requireAuth();
+// Join with admin_clients and bank_accs to get client name + billing address + bank account
   const result = await sql`
     SELECT
       i.id,
@@ -636,7 +687,9 @@ export async function getInvoiceByIdAdmin(invoiceId: string) {
 
 // -- CLIENTS --
 export async function getClients() {
-  const rows = await sql`
+  
+  await requireAuth();
+const rows = await sql`
     SELECT c.id,
            c.full_name as name,
            c.email,
@@ -673,7 +726,9 @@ export async function getClients() {
 }
 
 export async function getTodayBirthdays() {
-  const allClients = await sql`
+  
+  await requireAuth();
+const allClients = await sql`
     SELECT id, full_name as name, email, phone, birthday
     FROM admin_clients
     WHERE birthday IS NOT NULL AND birthday != ''
@@ -703,7 +758,9 @@ export async function getTodayBirthdays() {
 
 
 export async function getClientById(clientId: string) {
-  const rows = await sql`
+  
+  await requireAuth();
+const rows = await sql`
     SELECT c.id,
            c.full_name as name,
            c.email,
@@ -806,7 +863,9 @@ async function generateNextInvoiceId(): Promise<string> {
 }
 
 export async function createInvoice(invoiceData: any, lineItems: any[]) {
-  const email = invoiceData.userEmail?.trim() || null;
+  
+  await requireAuth();
+const email = invoiceData.userEmail?.trim() || null;
   const clientName = invoiceData.clientName?.trim() || null;
   const company = invoiceData.company?.trim() || null;
   const phone = invoiceData.phone?.trim() || null;
@@ -892,7 +951,9 @@ export async function createInvoice(invoiceData: any, lineItems: any[]) {
 }
 
 export async function updateInvoice(invoiceId: string, invoiceData: any, lineItems: any[]) {
-  const email = invoiceData.userEmail?.trim() || null;
+  
+  await requireAuth();
+const email = invoiceData.userEmail?.trim() || null;
   const date = invoiceData.date || new Date().toISOString().split("T")[0];
   const subtotal = parseFloat(invoiceData.subtotal) || 0;
   const discount = parseFloat(invoiceData.discount) || 0;
@@ -966,7 +1027,9 @@ export async function updateInvoice(invoiceId: string, invoiceData: any, lineIte
 
 // -- REPORTS --
 export async function getReports(range = 'lifetime', startDate?: string, endDate?: string) {
-  let startLimit = new Date(getCutoffDate(range));
+  
+  await requireAuth();
+let startLimit = new Date(getCutoffDate(range));
   let endLimit = new Date("2099-12-31");
   if (startDate && endDate) {
     startLimit = new Date(startDate);
@@ -1067,7 +1130,9 @@ export async function getReports(range = 'lifetime', startDate?: string, endDate
 
 // -- QUOTATIONS --
 export async function getQuotations(range = 'lifetime', startDate?: string, endDate?: string) {
-  let startLimit = new Date(getCutoffDate(range));
+  
+  await requireAuth();
+let startLimit = new Date(getCutoffDate(range));
   let endLimit = new Date("2099-12-31");
   if (startDate && endDate) {
     startLimit = new Date(startDate);
@@ -1104,7 +1169,9 @@ export async function getQuotations(range = 'lifetime', startDate?: string, endD
  
 // ─── REPLACE createQuotation in actions.ts ───────────────────────────────────
 export async function createQuotation(data: any, lineItems: any[] = []) {
-  const advance = data.advance || 0;
+  
+  await requireAuth();
+const advance = data.advance || 0;
   const discount = data.discount || 0;
   const totalDue = data.totalDue ?? (data.amount - advance);
 
@@ -1144,7 +1211,9 @@ export async function createQuotation(data: any, lineItems: any[] = []) {
 
 // ─── REPLACE updateQuotation in actions.ts ───────────────────────────────────
 export async function updateQuotation(id: number, data: any, lineItems: any[] = []) {
-  try {
+  
+  await requireAuth();
+try {
     const advance = data.advance || 0;
     const discount = data.discount || 0;
     const totalDue = data.totalDue ?? (data.amount - advance);
@@ -1190,7 +1259,9 @@ export async function updateQuotation(id: number, data: any, lineItems: any[] = 
 }
  
 export async function deleteQuotation(id: number) {
-  const q = await sql`SELECT linked_invoice_id FROM admin_quotations WHERE id = ${id}`;
+  
+  await requireAuth();
+const q = await sql`SELECT linked_invoice_id FROM admin_quotations WHERE id = ${id}`;
   const linkedInvoiceId = q[0]?.linked_invoice_id;
 
   if (linkedInvoiceId) {
@@ -1204,7 +1275,9 @@ export async function deleteQuotation(id: number) {
 }
  
 export async function confirmQuotation(quotationId: number, quotationData: any) {
-  const quotation = await sql`
+  
+  await requireAuth();
+const quotation = await sql`
     SELECT q.*, c.id as client_id_val, c.email, c.full_name as client_name, c.company, c.address as billing_address
     FROM admin_quotations q
     LEFT JOIN admin_clients c ON q.client_id = c.id
@@ -1307,7 +1380,9 @@ export async function confirmQuotation(quotationId: number, quotationData: any) 
 }
 
 export async function getQuotationById(quotationId: string) {
-  try {
+  
+  await requireAuth();
+try {
     const quotation = await sql`
       SELECT q.*,
              c.full_name as client_name, c.email, c.company, c.phone,
@@ -1364,7 +1439,9 @@ export async function getQuotationById(quotationId: string) {
 // -- LEDGER & ACCOUNTS HELPERS --
 
 export async function recalculateLedger(accountId: number) {
-  const acc = await sql`SELECT initial_balance FROM accounts WHERE id = ${accountId}`;
+  
+  await requireAuth();
+const acc = await sql`SELECT initial_balance FROM accounts WHERE id = ${accountId}`;
   if (acc.length === 0) return;
 
   const entries = await sql`
@@ -1391,7 +1468,9 @@ export async function syncLedgerEntry(
   description: string,
   accountId: number | null
 ) {
-  const strRefId = String(refId);
+  
+  await requireAuth();
+const strRefId = String(refId);
 
   // Find if there was an existing ledger entry
   const existing = await sql`
@@ -1430,7 +1509,9 @@ export async function syncLedgerEntry(
 // -- ACCOUNTS ACTIONS --
 
 export async function getAccounts() {
-  const rows = await sql`
+  
+  await requireAuth();
+const rows = await sql`
     SELECT 
       a.id, 
       a.name, 
@@ -1459,7 +1540,9 @@ export async function getAccounts() {
 }
 
 export async function createAccount(data: any) {
-  const result = await sql`
+  
+  await requireAuth();
+const result = await sql`
     INSERT INTO accounts (name, type, bank_name, account_number, branch, initial_balance, current_balance)
     VALUES (${data.name}, ${data.type}, ${data.bankName || null}, ${data.accountNumber || null}, ${data.branch || null}, ${data.initialBalance || 0}, ${data.initialBalance || 0})
     RETURNING id
@@ -1482,7 +1565,9 @@ export async function createAccount(data: any) {
 }
 
 export async function updateAccount(id: number, data: any) {
-  await sql`
+  
+  await requireAuth();
+await sql`
     UPDATE accounts
     SET 
       name = ${data.name}, 
@@ -1528,12 +1613,16 @@ export async function updateAccount(id: number, data: any) {
 }
 
 export async function deleteAccount(id: number) {
-  await sql`DELETE FROM accounts WHERE id = ${id}`;
+  
+  await requireAuth();
+await sql`DELETE FROM accounts WHERE id = ${id}`;
   await logActivity(`Deleted account ${id}`);
 }
 
 export async function getAccountLedger(accountId: number, range = 'lifetime', startDate?: string, endDate?: string) {
-  let startLimit = new Date(getCutoffDate(range));
+  
+  await requireAuth();
+let startLimit = new Date(getCutoffDate(range));
   let endLimit = new Date("2099-12-31");
   if (startDate && endDate) {
     startLimit = new Date(startDate);
@@ -1557,7 +1646,9 @@ export async function getAccountLedger(accountId: number, range = 'lifetime', st
 }
 
 export async function getMainLedger(range = 'lifetime', startDate?: string, endDate?: string) {
-  let startLimit = new Date(getCutoffDate(range));
+  
+  await requireAuth();
+let startLimit = new Date(getCutoffDate(range));
   let endLimit = new Date("2099-12-31");
   if (startDate && endDate) {
     startLimit = new Date(startDate);
@@ -1604,7 +1695,9 @@ export async function getMainLedger(range = 'lifetime', startDate?: string, endD
 
 // -- BANK ACCOUNTS (Dummy for fallback) --
 export async function getBankAccounts() {
-  return [];
+  
+  await requireAuth();
+return [];
 }
 
 // -- MANUAL JOURNAL & TRANSFER ACTIONS --
@@ -1615,7 +1708,9 @@ export async function createManualJournalEntry(
   lines: { accountId: number; debit: number; credit: number }[],
   refType: 'manual' | 'transfer' = 'manual'
 ) {
-  // 1. Validation: sum of debits must equal sum of credits
+  
+  await requireAuth();
+// 1. Validation: sum of debits must equal sum of credits
   const totalDebit = lines.reduce((sum, l) => sum + (l.debit || 0), 0);
   const totalCredit = lines.reduce((sum, l) => sum + (l.credit || 0), 0);
 
@@ -1658,7 +1753,9 @@ export async function updateManualJournalEntry(
   lines: { accountId: number; debit: number; credit: number }[],
   refType: 'manual' | 'transfer' = 'manual'
 ) {
-  // 1. Validation: sum of debits must equal sum of credits
+  
+  await requireAuth();
+// 1. Validation: sum of debits must equal sum of credits
   const totalDebit = lines.reduce((sum, l) => sum + (l.debit || 0), 0);
   const totalCredit = lines.reduce((sum, l) => sum + (l.credit || 0), 0);
 
@@ -1702,7 +1799,9 @@ export async function updateManualJournalEntry(
 }
 
 export async function deleteJournalEntry(refId: string) {
-  // 1. Find affected accounts
+  
+  await requireAuth();
+// 1. Find affected accounts
   const entries = await sql`
     SELECT DISTINCT account_id FROM ledger_entries 
     WHERE reference_id = ${refId}
@@ -1721,7 +1820,9 @@ export async function deleteJournalEntry(refId: string) {
 }
 
 export async function getJournalEntry(refId: string) {
-  const rows = await sql`
+  
+  await requireAuth();
+const rows = await sql`
     SELECT id, account_id as "accountId", date, description, debit, credit, reference_type as "refType"
     FROM ledger_entries
     WHERE reference_id = ${refId}
@@ -1740,7 +1841,9 @@ export async function getJournalEntry(refId: string) {
 
 // ─── VEHICLE STOCK ACTIONS ───────────────────────────────────
 export async function getVehicleStock() {
-  const rows = await sql`
+  
+  await requireAuth();
+const rows = await sql`
     SELECT 
       id, make, model, year, vin, reg_number as "regNumber", color,
       mileage, fuel_type as "fuelType", transmission, buy_price as "buyPrice",
@@ -1769,7 +1872,9 @@ export async function getVehicleStock() {
 }
 
 export async function createVehicleStock(data: any) {
-  await sql`
+  
+  await requireAuth();
+await sql`
     INSERT INTO vehicle_stock (
       make, model, year, vin, reg_number, color, mileage,
       fuel_type, transmission, buy_price, asking_price, status, description, image_url
@@ -1785,7 +1890,9 @@ export async function createVehicleStock(data: any) {
 }
 
 export async function updateVehicleStock(id: number, data: any) {
-  await sql`
+  
+  await requireAuth();
+await sql`
     UPDATE vehicle_stock
     SET 
       make = ${data.make},
@@ -1808,6 +1915,8 @@ export async function updateVehicleStock(id: number, data: any) {
 }
 
 export async function deleteVehicleStock(id: number) {
-  await sql`DELETE FROM vehicle_stock WHERE id = ${id}`;
+  
+  await requireAuth();
+await sql`DELETE FROM vehicle_stock WHERE id = ${id}`;
   await logActivity(`Deleted vehicle stock record ${id}`);
 }

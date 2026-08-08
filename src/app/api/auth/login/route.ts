@@ -3,9 +3,9 @@ import jwt from "jsonwebtoken";
 import sql from "@/lib/db";
 //import db from "../../../../lib/db";
 
-const JWT_SECRET = process.env.JWT_SECRET || "super-secret-carzone-jwt-token-key-change-me";
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@carzone.lk";
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
+const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV !== "production" ? "super-secret-carzone-jwt-token-key-change-me" : "");
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || (process.env.NODE_ENV !== "production" ? "admin@carzone.lk" : null);
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || (process.env.NODE_ENV !== "production" ? "admin123" : null);
 
 export async function POST(request: Request) {
   try {
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
 
     // Fallback if DB lookup failed or didn't authenticate
     if (!authenticatedUser) {
-      if (email.trim().toLowerCase() === ADMIN_EMAIL.toLowerCase() && password === ADMIN_PASSWORD) {
+      if (ADMIN_EMAIL && ADMIN_PASSWORD && email.trim().toLowerCase() === ADMIN_EMAIL.toLowerCase() && password === ADMIN_PASSWORD) {
         authenticatedUser = {
           id: 999,
           email: ADMIN_EMAIL,
