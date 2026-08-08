@@ -260,8 +260,15 @@ function combineDateWithCurrentTime(inputDate: any): Date {
 }
 
 // -- INCOMES --
-export async function getIncomes(range = 'lifetime') {
-  const cutoff = getCutoffDate(range);
+export async function getIncomes(range = 'lifetime', startDate?: string, endDate?: string) {
+  let startLimit = new Date(getCutoffDate(range));
+  let endLimit = new Date("2099-12-31");
+  if (startDate && endDate) {
+    startLimit = new Date(startDate);
+    endLimit = new Date(endDate);
+    endLimit.setHours(23, 59, 59, 999);
+  }
+
   const statsThisMonth = await sql`SELECT SUM(amount) as total FROM admin_incomes WHERE date_trunc('month', date) = date_trunc('month', current_date)`;
   const statsLastMonth = await sql`SELECT SUM(amount) as total FROM admin_incomes WHERE date_trunc('month', date) = date_trunc('month', current_date - interval '1 month')`;
   const statsYtd = await sql`SELECT SUM(amount) as total FROM admin_incomes WHERE date_trunc('year', date) = date_trunc('year', current_date)`;
@@ -271,7 +278,7 @@ export async function getIncomes(range = 'lifetime') {
     FROM admin_incomes i
     LEFT JOIN admin_clients c ON i.client_id = c.id
     LEFT JOIN accounts a ON i.account_id = a.id
-    WHERE i.date >= ${cutoff}
+    WHERE i.date >= ${startLimit} AND i.date <= ${endLimit}
     ORDER BY i.date DESC
   `;
 
@@ -367,8 +374,15 @@ export async function deleteIncome(id: number) {
 }
 
 // -- EXPENSES --
-export async function getExpenses(range = 'lifetime') {
-  const cutoff = getCutoffDate(range);
+export async function getExpenses(range = 'lifetime', startDate?: string, endDate?: string) {
+  let startLimit = new Date(getCutoffDate(range));
+  let endLimit = new Date("2099-12-31");
+  if (startDate && endDate) {
+    startLimit = new Date(startDate);
+    endLimit = new Date(endDate);
+    endLimit.setHours(23, 59, 59, 999);
+  }
+
   const statsThisMonth = await sql`SELECT SUM(amount) as total FROM admin_expenses WHERE date_trunc('month', date) = date_trunc('month', current_date)`;
   const statsLastMonth = await sql`SELECT SUM(amount) as total FROM admin_expenses WHERE date_trunc('month', date) = date_trunc('month', current_date - interval '1 month')`;
   const statsYtd = await sql`SELECT SUM(amount) as total FROM admin_expenses WHERE date_trunc('year', date) = date_trunc('year', current_date)`;
@@ -377,7 +391,7 @@ export async function getExpenses(range = 'lifetime') {
     SELECT e.id, e.date, e.amount, e.description as desc, e.category, e.payment_method as "paidVia", e.receipt_url as "receiptUrl", e.account_id as "accountId", a.name as "accountName"
     FROM admin_expenses e
     LEFT JOIN accounts a ON e.account_id = a.id
-    WHERE e.date >= ${cutoff}
+    WHERE e.date >= ${startLimit} AND e.date <= ${endLimit}
     ORDER BY e.date DESC
   `;
 
@@ -430,11 +444,19 @@ export async function deleteExpense(id: number) {
 }
 
 // -- INVOICES --
-export async function getInvoices() {
-  const totalIssuedCount = await sql`SELECT COUNT(*) as count FROM invoices`;
-  const paidCount = await sql`SELECT COUNT(*) as count FROM invoices WHERE payment_status = 'paid'`;
-  const pendingCount = await sql`SELECT COUNT(*) as count FROM invoices WHERE payment_status = 'unpaid'`;
-  const overdueCount = await sql`SELECT COUNT(*) as count FROM invoices WHERE payment_status = 'overdue'`;
+export async function getInvoices(range = 'lifetime', startDate?: string, endDate?: string) {
+  let startLimit = new Date(getCutoffDate(range));
+  let endLimit = new Date("2099-12-31");
+  if (startDate && endDate) {
+    startLimit = new Date(startDate);
+    endLimit = new Date(endDate);
+    endLimit.setHours(23, 59, 59, 999);
+  }
+
+  const totalIssuedCount = await sql`SELECT COUNT(*) as count FROM invoices WHERE date >= ${startLimit} AND date <= ${endLimit}`;
+  const paidCount = await sql`SELECT COUNT(*) as count FROM invoices WHERE payment_status = 'paid' AND date >= ${startLimit} AND date <= ${endLimit}`;
+  const pendingCount = await sql`SELECT COUNT(*) as count FROM invoices WHERE payment_status = 'unpaid' AND date >= ${startLimit} AND date <= ${endLimit}`;
+  const overdueCount = await sql`SELECT COUNT(*) as count FROM invoices WHERE payment_status = 'overdue' AND date >= ${startLimit} AND date <= ${endLimit}`;
 
   const rows = await sql`
     SELECT
@@ -450,6 +472,7 @@ export async function getInvoices() {
     LEFT JOIN admin_clients ac ON 
       (i.client_id IS NOT NULL AND i.client_id = ac.id) OR 
       (i.client_id IS NULL AND i.user_email IS NOT NULL AND LOWER(i.user_email) = LOWER(ac.email))
+    WHERE i.date >= ${startLimit} AND i.date <= ${endLimit}
     ORDER BY i.created_at DESC
   `;
 
@@ -942,10 +965,17 @@ export async function updateInvoice(invoiceId: string, invoiceData: any, lineIte
 }
 
 // -- REPORTS --
-export async function getReports(range = 'lifetime') {
-  const cutoff = getCutoffDate(range);
-  const incomeStats = await sql`SELECT SUM(amount) as total FROM admin_incomes WHERE date >= ${cutoff}`;
-  const expenseStats = await sql`SELECT SUM(amount) as total FROM admin_expenses WHERE date >= ${cutoff}`;
+export async function getReports(range = 'lifetime', startDate?: string, endDate?: string) {
+  let startLimit = new Date(getCutoffDate(range));
+  let endLimit = new Date("2099-12-31");
+  if (startDate && endDate) {
+    startLimit = new Date(startDate);
+    endLimit = new Date(endDate);
+    endLimit.setHours(23, 59, 59, 999);
+  }
+
+  const incomeStats = await sql`SELECT SUM(amount) as total FROM admin_incomes WHERE date >= ${startLimit} AND date <= ${endLimit}`;
+  const expenseStats = await sql`SELECT SUM(amount) as total FROM admin_expenses WHERE date >= ${startLimit} AND date <= ${endLimit}`;
   
   const annualRevenue = parseFloat(incomeStats[0]?.total || 0);
   const annualExpenses = parseFloat(expenseStats[0]?.total || 0);
@@ -955,7 +985,7 @@ export async function getReports(range = 'lifetime') {
   const rawIncome = await sql`
     SELECT category, amount
     FROM admin_incomes
-    WHERE date >= ${cutoff}
+    WHERE date >= ${startLimit} AND date <= ${endLimit}
   `;
 
   const serviceMap: Record<string, number> = {};
@@ -975,7 +1005,7 @@ export async function getReports(range = 'lifetime') {
   const expensesBreakdown = await sql`
     SELECT category as name, SUM(amount) as value
     FROM admin_expenses
-    WHERE date >= ${cutoff}
+    WHERE date >= ${startLimit} AND date <= ${endLimit}
     GROUP BY category
     ORDER BY value DESC
   `;
@@ -1036,8 +1066,14 @@ export async function getReports(range = 'lifetime') {
 }
 
 // -- QUOTATIONS --
-export async function getQuotations(range = 'lifetime') {
-  const cutoff = getCutoffDate(range);
+export async function getQuotations(range = 'lifetime', startDate?: string, endDate?: string) {
+  let startLimit = new Date(getCutoffDate(range));
+  let endLimit = new Date("2099-12-31");
+  if (startDate && endDate) {
+    startLimit = new Date(startDate);
+    endLimit = new Date(endDate);
+    endLimit.setHours(23, 59, 59, 999);
+  }
   
   const rows = await sql`
     SELECT q.id, q.date, q.amount, q.advance, q.total_due as "totalDue",
@@ -1045,7 +1081,7 @@ export async function getQuotations(range = 'lifetime') {
            q.invoice_id as invoice, q.receipt_url as "receiptUrl", q.status
     FROM admin_quotations q
     LEFT JOIN admin_clients c ON q.client_id = c.id
-    WHERE q.date >= ${cutoff}
+    WHERE q.date >= ${startLimit} AND q.date <= ${endLimit}
     ORDER BY q.date DESC
   `;
  
@@ -1496,12 +1532,19 @@ export async function deleteAccount(id: number) {
   await logActivity(`Deleted account ${id}`);
 }
 
-export async function getAccountLedger(accountId: number, range = 'lifetime') {
-  const cutoff = getCutoffDate(range);
+export async function getAccountLedger(accountId: number, range = 'lifetime', startDate?: string, endDate?: string) {
+  let startLimit = new Date(getCutoffDate(range));
+  let endLimit = new Date("2099-12-31");
+  if (startDate && endDate) {
+    startLimit = new Date(startDate);
+    endLimit = new Date(endDate);
+    endLimit.setHours(23, 59, 59, 999);
+  }
+  
   const rows = await sql`
     SELECT id, date, description, debit, credit, running_balance as "runningBalance", reference_type as "refType", reference_id as "refId"
     FROM ledger_entries
-    WHERE account_id = ${accountId} AND date >= ${cutoff}
+    WHERE account_id = ${accountId} AND date >= ${startLimit} AND date <= ${endLimit}
     ORDER BY date DESC, id DESC
   `;
   return rows.map(r => ({
@@ -1513,14 +1556,20 @@ export async function getAccountLedger(accountId: number, range = 'lifetime') {
   }));
 }
 
-export async function getMainLedger(range = 'lifetime') {
-  const cutoff = getCutoffDate(range);
+export async function getMainLedger(range = 'lifetime', startDate?: string, endDate?: string) {
+  let startLimit = new Date(getCutoffDate(range));
+  let endLimit = new Date("2099-12-31");
+  if (startDate && endDate) {
+    startLimit = new Date(startDate);
+    endLimit = new Date(endDate);
+    endLimit.setHours(23, 59, 59, 999);
+  }
   
   // Calculate running balance on the fly chronologically starting from balance forward
   const balanceForwardQuery = await sql`
     SELECT COALESCE(SUM(debit - credit), 0) as balance_forward
     FROM ledger_entries
-    WHERE date < ${cutoff}
+    WHERE date < ${startLimit}
   `;
   const balanceForward = parseFloat(balanceForwardQuery[0].balance_forward || 0);
 
@@ -1539,7 +1588,7 @@ export async function getMainLedger(range = 'lifetime') {
       SUM(le.debit - le.credit) OVER (ORDER BY le.date ASC, le.id ASC) + ${balanceForward} as "runningBalance"
     FROM ledger_entries le
     JOIN accounts a ON le.account_id = a.id
-    WHERE le.date >= ${cutoff}
+    WHERE le.date >= ${startLimit} AND le.date <= ${endLimit}
     ORDER BY le.date DESC, le.id DESC
   `;
   

@@ -59,7 +59,7 @@ export default function EditQuotationPage() {
   ]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>(["Spare Parts"]);
 
-  const ALL_CATEGORIES = ["Vehicle Sales", "Broker Commission", "Registration & Transfer Fees", "Inspection & Certification", "Financing & Lease Commission", "Other Services"];
+  const ALL_CATEGORIES = ["Vehicle Sales", "Registration & Transfer Fees", "Inspection & Certification", "Financing & Lease Commission", "Other Services"];
   const categories = ALL_CATEGORIES;
 
   useEffect(() => {

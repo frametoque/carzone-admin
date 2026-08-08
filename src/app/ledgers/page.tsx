@@ -198,12 +198,12 @@ export default function LedgersPage() {
 
     try {
       if (activeTab === "general") {
-        const data = await getMainLedger("lifetime");
+        const data = await getMainLedger(dateRange, startDate, endDate);
         if (isCurrent && !isCurrent()) return;
         setEntries(data);
         setCachedData(cacheKey, data);
       } else if (activeTab === "individual" && selectedAccountId !== "") {
-        const data = await getAccountLedger(Number(selectedAccountId), "lifetime");
+        const data = await getAccountLedger(Number(selectedAccountId), dateRange, startDate, endDate);
         if (isCurrent && !isCurrent()) return;
         setEntries(data);
         setCachedData(cacheKey, data);
@@ -231,10 +231,25 @@ export default function LedgersPage() {
   }, []);
 
   useEffect(() => {
+    const handleDateRangeChange = (e: Event) => {
+      const customEvent = e as CustomEvent<{ range: string; startDate: string; endDate: string }>;
+      if (customEvent.detail) {
+        setDateRange(customEvent.detail.range);
+        setStartDate(customEvent.detail.startDate);
+        setEndDate(customEvent.detail.endDate);
+      }
+    };
+    window.addEventListener("admin:date-range-change", handleDateRangeChange);
+    return () => {
+      window.removeEventListener("admin:date-range-change", handleDateRangeChange);
+    };
+  }, []);
+
+  useEffect(() => {
     let active = true;
     loadLedgerData(() => active);
     return () => { active = false; };
-  }, [activeTab, selectedAccountId]);
+  }, [activeTab, selectedAccountId, startDate, endDate]);
 
   const selectedAccount = accounts.find(a => a.id === Number(selectedAccountId));
 

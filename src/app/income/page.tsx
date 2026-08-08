@@ -8,7 +8,7 @@ import { SkeletonCards, SkeletonTable } from "../components/SkeletonUI";
 import CategoryPicker from "../components/CategoryPicker";
 import DateRangeSelector from "../components/DateRangeSelector";
 
-const ALL_CATEGORIES = ["Vehicle Sales", "Broker Commission", "Registration & Transfer Fees", "Inspection & Certification", "Financing & Lease Commission", "Other Services"];
+const ALL_CATEGORIES = ["Vehicle Sales", "Registration & Transfer Fees", "Inspection & Certification", "Financing & Lease Commission", "Other Services"];
 
 const formatLKR = (amount: number) =>
   new Intl.NumberFormat('en-LK', { style: 'currency', currency: 'LKR' }).format(amount || 0);
@@ -82,7 +82,7 @@ export default function IncomePage() {
   const loadData = async (isCurrent?: () => boolean) => {
     setLoading(true);
     try {
-      const [res, cls, accs] = await Promise.all([getIncomes("lifetime"), getClients(), getAccounts()]);
+      const [res, cls, accs] = await Promise.all([getIncomes(dateRange, startDate, endDate), getClients(), getAccounts()]);
       if (isCurrent && !isCurrent()) return;
       setData(res);
       setClients(cls);

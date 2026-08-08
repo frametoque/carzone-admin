@@ -46,7 +46,7 @@ export default function ExpensesPage() {
   const loadData = async (isCurrent?: () => boolean) => {
     setLoading(true);
     try {
-      const [res, accs] = await Promise.all([getExpenses("lifetime"), getAccounts()]);
+      const [res, accs] = await Promise.all([getExpenses(dateRange, startDate, endDate), getAccounts()]);
       if (isCurrent && !isCurrent()) return;
       setData(res);
       setAccounts(accs);

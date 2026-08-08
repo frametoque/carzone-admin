@@ -6,43 +6,40 @@ interface DateRangeSelectorProps {
   dateRange: string;
   startDate: string;
   endDate: string;
-  onRangeChange: (range: string) => void;
-  onStartDateChange: (date: string) => void;
-  onEndDateChange: (date: string) => void;
+  onChange: (range: string, startDate: string, endDate: string) => void;
 }
 
 export default function DateRangeSelector({
   dateRange,
   startDate,
   endDate,
-  onRangeChange,
-  onStartDateChange,
-  onEndDateChange
+  onChange
 }: DateRangeSelectorProps) {
   
   const handleRangeChange = (range: string) => {
-    onRangeChange(range);
     const today = new Date();
     const todayStr = today.toISOString().split("T")[0];
+    let sDate = startDate;
+    let eDate = endDate;
 
     if (range === "this year") {
-      onStartDateChange(`${today.getFullYear()}-01-01`);
-      onEndDateChange(todayStr);
+      sDate = `${today.getFullYear()}-01-01`;
+      eDate = todayStr;
     } else if (range === "6 months") {
       const d = new Date();
       d.setMonth(d.getMonth() - 6);
-      onStartDateChange(d.toISOString().split("T")[0]);
-      onEndDateChange(todayStr);
+      sDate = d.toISOString().split("T")[0];
+      eDate = todayStr;
     } else if (range === "three months") {
       const d = new Date();
       d.setMonth(d.getMonth() - 3);
-      onStartDateChange(d.toISOString().split("T")[0]);
-      onEndDateChange(todayStr);
+      sDate = d.toISOString().split("T")[0];
+      eDate = todayStr;
     } else if (range === "one month") {
       const d = new Date();
       d.setMonth(d.getMonth() - 1);
-      onStartDateChange(d.toISOString().split("T")[0]);
-      onEndDateChange(todayStr);
+      sDate = d.toISOString().split("T")[0];
+      eDate = todayStr;
     } else if (range === "custom") {
       const currentYear = today.getFullYear();
       const currentMonth = today.getMonth();
@@ -52,12 +49,14 @@ export default function DateRangeSelector({
         fyStartYear = currentYear - 1;
         fyEndYear = currentYear;
       }
-      onStartDateChange(`${fyStartYear}-04-01`);
-      onEndDateChange(`${fyEndYear}-03-31`);
+      sDate = `${fyStartYear}-04-01`;
+      eDate = `${fyEndYear}-03-31`;
     } else if (range === "lifetime") {
-      onStartDateChange("1970-01-01");
-      onEndDateChange("2099-12-31");
+      sDate = "1970-01-01";
+      eDate = "2099-12-31";
     }
+
+    onChange(range, sDate, eDate);
   };
 
   return (
@@ -85,14 +84,14 @@ export default function DateRangeSelector({
           <input
             type="date"
             value={startDate}
-            onChange={(e) => onStartDateChange(e.target.value)}
+            onChange={(e) => onChange(dateRange, e.target.value, endDate)}
             className="bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 outline-none focus:border-brand-500 transition-colors text-sm text-white"
           />
           <span className="text-gray-400 text-xs uppercase font-semibold">to</span>
           <input
             type="date"
             value={endDate}
-            onChange={(e) => onEndDateChange(e.target.value)}
+            onChange={(e) => onChange(dateRange, startDate, e.target.value)}
             className="bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 outline-none focus:border-brand-500 transition-colors text-sm text-white"
           />
         </div>

@@ -299,60 +299,13 @@ const Header = ({ user, isLoaded, setMobileMenuOpen }: { user: any; isLoaded: bo
     }
   }, [pageGroup]);
 
-  const handleRangeChange = (range: string) => {
+  const handleDateChange = (range: string, sDate: string, eDate: string) => {
     setDateRange(range);
-    const today = new Date();
-    const todayStr = today.toISOString().split("T")[0];
-    let sDate = startDate;
-    let eDate = endDate;
-
-    if (range === "this year") {
-      sDate = `${today.getFullYear()}-01-01`;
-      eDate = todayStr;
-    } else if (range === "6 months") {
-      const d = new Date();
-      d.setMonth(d.getMonth() - 6);
-      sDate = d.toISOString().split("T")[0];
-      eDate = todayStr;
-    } else if (range === "three months") {
-      const d = new Date();
-      d.setMonth(d.getMonth() - 3);
-      sDate = d.toISOString().split("T")[0];
-      eDate = todayStr;
-    } else if (range === "one month") {
-      const d = new Date();
-      d.setMonth(d.getMonth() - 1);
-      sDate = d.toISOString().split("T")[0];
-      eDate = todayStr;
-    } else if (range === "lifetime") {
-      sDate = "1970-01-01";
-      eDate = "2099-12-31";
-    }
-
     setStartDate(sDate);
     setEndDate(eDate);
-
     window.dispatchEvent(
       new CustomEvent("admin:date-range-change", {
         detail: { range, startDate: sDate, endDate: eDate }
-      })
-    );
-  };
-
-  const handleStartDateChange = (val: string) => {
-    setStartDate(val);
-    window.dispatchEvent(
-      new CustomEvent("admin:date-range-change", {
-        detail: { range: dateRange, startDate: val, endDate }
-      })
-    );
-  };
-
-  const handleEndDateChange = (val: string) => {
-    setEndDate(val);
-    window.dispatchEvent(
-      new CustomEvent("admin:date-range-change", {
-        detail: { range: dateRange, startDate, endDate: val }
       })
     );
   };
@@ -459,7 +412,7 @@ const Header = ({ user, isLoaded, setMobileMenuOpen }: { user: any; isLoaded: bo
 
   const isReportsTrialTab = pathname.startsWith("/reports") && reportsTab === "trial";
   const isDashboardOrClientsPage = (pathname === "/" || pathname === "/dashboard" || pathname.startsWith("/clients"));
-  const shouldShowDateRange = (pathname === "/dashboard" || pathname === "/" || pathname.startsWith("/income") || pathname.startsWith("/expenses") || pathname.startsWith("/ledgers") || pathname.startsWith("/quotations") || (pathname.startsWith("/reports") && !isReportsTrialTab));
+  const shouldShowDateRange = (pathname === "/dashboard" || pathname === "/" || pathname.startsWith("/income") || pathname.startsWith("/expenses") || pathname.startsWith("/ledgers") || pathname.startsWith("/quotations") || pathname.startsWith("/invoices") || (pathname.startsWith("/reports") && !isReportsTrialTab));
 
   // Time-based greeting for dashboard
   const getGreeting = (): string => {
@@ -506,9 +459,7 @@ const Header = ({ user, isLoaded, setMobileMenuOpen }: { user: any; isLoaded: bo
                 dateRange={dateRange}
                 startDate={startDate}
                 endDate={endDate}
-                onRangeChange={handleRangeChange}
-                onStartDateChange={handleStartDateChange}
-                onEndDateChange={handleEndDateChange}
+                onChange={handleDateChange}
               />
             </>
           )}

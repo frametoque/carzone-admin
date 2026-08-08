@@ -67,9 +67,9 @@ export default function ReportsPage() {
 
       try {
         const [res, cls, ledger] = await Promise.all([
-          getReports("lifetime"),
+          getReports(pnlDateRange, pnlStartDate, pnlEndDate),
           getClients(),
-          getMainLedger("lifetime")
+          getMainLedger(pnlDateRange, pnlStartDate, pnlEndDate)
         ]);
         if (active) {
           setData(res);
@@ -91,7 +91,7 @@ export default function ReportsPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [pnlDateRange, pnlStartDate, pnlEndDate]);
 
   useEffect(() => {
     window.dispatchEvent(new CustomEvent("reports:tab-change", { detail: activeTab }));

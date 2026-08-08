@@ -54,7 +54,7 @@ export default function QuotationsPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const res = await getQuotations();
+      const res = await getQuotations(dateRange, startDate, endDate);
       setData(res);
     } catch (e) {
       console.error("Failed to load quotations", e);

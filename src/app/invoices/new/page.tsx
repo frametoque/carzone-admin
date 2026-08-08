@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { createInvoice, getClients, createClient } from "../../actions/actions";
 import CategoryPicker from "../../components/CategoryPicker";
 
-const ALL_CATEGORIES = ["Vehicle Sales", "Broker Commission", "Registration & Transfer Fees", "Inspection & Certification", "Financing & Lease Commission", "Other Services"];
+const ALL_CATEGORIES = ["Vehicle Sales", "Registration & Transfer Fees", "Inspection & Certification", "Financing & Lease Commission", "Other Services"];
 
 export default function NewInvoicePage() {
   const router = useRouter();

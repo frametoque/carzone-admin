@@ -20,6 +20,9 @@ export default function InvoicesPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [dateRange, setDateRange] = useState("lifetime");
+  const [startDate, setStartDate] = useState("1970-01-01");
+  const [endDate, setEndDate] = useState("2099-12-31");
 
   // Payment recording states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -32,7 +35,7 @@ export default function InvoicesPage() {
 
   const loadData = async (isCurrent?: () => boolean) => {
     try {
-      const res = await getInvoices();
+      const res = await getInvoices(dateRange, startDate, endDate);
       if (isCurrent && !isCurrent()) return;
       setData(res);
       // Fetch accounts to populate recording modal
@@ -51,10 +54,25 @@ export default function InvoicesPage() {
   };
 
   useEffect(() => { 
+    const handleDateRangeChange = (e: Event) => {
+      const customEvent = e as CustomEvent<{ range: string; startDate: string; endDate: string }>;
+      if (customEvent.detail) {
+        setDateRange(customEvent.detail.range);
+        setStartDate(customEvent.detail.startDate);
+        setEndDate(customEvent.detail.endDate);
+      }
+    };
+    window.addEventListener("admin:date-range-change", handleDateRangeChange);
+    return () => {
+      window.removeEventListener("admin:date-range-change", handleDateRangeChange);
+    };
+  }, []);
+
+  useEffect(() => { 
     let current = true;
     loadData(() => current); 
     return () => { current = false; };
-  }, []);
+  }, [startDate, endDate]);
 
   const openPaymentModal = (invoice: any) => {
     setSelectedInvoice(invoice);
