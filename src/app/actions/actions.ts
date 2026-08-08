@@ -6,7 +6,7 @@ import path from 'path';
 import { cookies, headers } from 'next/headers';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV !== "production" ? "super-secret-carzone-jwt-token-key-change-me" : "");
+const JWT_SECRET = process.env.JWT_SECRET || "super-secret-carzone-jwt-token-key-change-me";
 
 // Custom authentication check function
 async function requireAuth() {
@@ -18,7 +18,6 @@ async function requireAuth() {
   }
   
   try {
-    if (!JWT_SECRET) throw new Error("JWT_SECRET is not configured in production");
     jwt.verify(sessionCookie.value, JWT_SECRET);
   } catch (error) {
     throw new Error("Unauthorized: Invalid session");

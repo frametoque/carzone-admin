@@ -78,7 +78,7 @@ export async function POST(request: Request) {
       const response = NextResponse.json({ success: true, step2Required: false, user: authenticatedUser });
       response.cookies.set("session", token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
+        secure: false, // Changed to false to allow HTTP in production
         sameSite: "lax",
         maxAge: 60 * 60 * 24 * 7, // 7 days
         path: "/",
