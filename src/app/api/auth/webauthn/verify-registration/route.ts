@@ -4,12 +4,14 @@ import sql from "@/lib/db";
 import { cookies } from "next/headers";
 import jwt from "jsonwebtoken";
 
-const rpID = process.env.NEXT_PUBLIC_RP_ID || "localhost";
-const expectedOrigin = process.env.NEXT_PUBLIC_ORIGIN || "http://localhost:3000";
 const JWT_SECRET = process.env.JWT_SECRET || "super-secret-carzone-jwt-token-key-change-me";
 
 export async function POST(request: Request) {
   try {
+    const host = request.headers.get("host") || "localhost:3000";
+    const rpID = host.split(":")[0];
+    const expectedOrigin = process.env.NODE_ENV === "production" ? `https://${host}` : `http://${host}`;
+
     const cookieStore = await cookies();
     const token = cookieStore.get("session")?.value;
 

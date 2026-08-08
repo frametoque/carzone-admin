@@ -5,11 +5,13 @@ import { cookies } from "next/headers";
 import jwt from "jsonwebtoken";
 
 const rpName = "IslandSpares Admin";
-const rpID = process.env.NEXT_PUBLIC_RP_ID || "localhost";
 const JWT_SECRET = process.env.JWT_SECRET || "super-secret-carzone-jwt-token-key-change-me";
 
 export async function GET(request: Request) {
   try {
+    const host = request.headers.get("host") || "localhost:3000";
+    const rpID = host.split(":")[0];
+    
     const cookieStore = await cookies();
     const token = cookieStore.get("session")?.value;
 

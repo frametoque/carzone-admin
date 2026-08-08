@@ -2,10 +2,12 @@ import { NextResponse } from "next/server";
 import { generateAuthenticationOptions } from "@simplewebauthn/server";
 import sql from "@/lib/db";
 
-const rpID = process.env.NEXT_PUBLIC_RP_ID || "localhost";
 
 export async function POST(request: Request) {
   try {
+    const host = request.headers.get("host") || "localhost:3000";
+    const rpID = host.split(":")[0];
+    
     const { email } = await request.json();
     if (!email) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
